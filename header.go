@@ -29,3 +29,28 @@ func Allow(h http.Header) []string {
 func SetAllow(h http.Header, methods []string) {
 	h.Set("Allow", strings.Join(methods, ", "))
 }
+
+// Vary returns a slice of names from the Vary field in h
+// (RFC 7231 Section 7.1.4).
+// Names are canonicalized with http.CanonicalHeaderKey.
+// A wildcard (Vary: *) is returned as a slice of 1 element.
+func Vary(h http.Header) []string {
+	var fields []string
+	for v, vs := toNextElem("", h["Vary"]); vs != nil; v, vs = toNextElem(v, vs) {
+		var tok string
+		if tok, v = token(v); tok != "" {
+			fields = append(fields, http.CanonicalHeaderKey(tok))
+		}
+	}
+	return fields
+}
+
+// SetVary sets the Vary field in h (RFC 7231 Section 7.1.4). See also AddVary.
+func SetVary(h http.Header, fields []string) {
+	h.Set("Vary", strings.Join(fields, ", "))
+}
+
+// AddVary appends to the Vary field in h (RFC 7231 Section 7.1.4).
+func AddVary(h http.Header, fields []string) {
+	h.Add("Vary", strings.Join(fields, ", "))
+}

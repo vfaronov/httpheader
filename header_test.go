@@ -111,3 +111,9 @@ func ExampleSetAllow() {
 	fmt.Printf("%q", header)
 	// Output: map["Allow":["GET, HEAD, OPTIONS"]]
 }
+
+func ExampleVary() {
+	header := http.Header{"Vary": []string{"cookie, accept-encoding"}}
+	fmt.Printf("%q", Vary(header))
+	// Output: ["Cookie" "Accept-Encoding"]
+}
