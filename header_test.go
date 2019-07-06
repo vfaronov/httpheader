@@ -126,7 +126,7 @@ func ExampleVia() {
 
 func ExampleAddVia() {
 	header := http.Header{"Via": []string{"1.0 foo"}}
-	AddVia(header, ViaEntry{
+	AddVia(header, ViaElem{
 		ReceivedProto: "HTTP/1.1",
 		ReceivedBy:    "bar",
 	})
@@ -137,35 +137,35 @@ func ExampleAddVia() {
 func TestVia(t *testing.T) {
 	tests := []struct {
 		header http.Header
-		result []ViaEntry
+		result []ViaElem
 	}{
 		// Valid headers.
 		{
 			http.Header{"Via": []string{"1.0 foo"}},
-			[]ViaEntry{{"HTTP/1.0", "foo", ""}},
+			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
 			http.Header{"Via": []string{"1.0 \tfoo"}},
-			[]ViaEntry{{"HTTP/1.0", "foo", ""}},
+			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
 			http.Header{"Via": []string{"1.0 foo  "}},
-			[]ViaEntry{{"HTTP/1.0", "foo", ""}},
+			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
 			http.Header{"Via": []string{"1.0 foo  ,"}},
-			[]ViaEntry{{"HTTP/1.0", "foo", ""}},
+			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
 			http.Header{"Via": []string{"1.0 foo\t (comment)"}},
-			[]ViaEntry{{"HTTP/1.0", "foo", "comment"}},
+			[]ViaElem{{"HTTP/1.0", "foo", "comment"}},
 		},
 		{
 			http.Header{"Via": []string{
 				"1.0 foo,1.0   bar\t, \t 1.0 baz,,",
 				"1.1 qux",
 			}},
-			[]ViaEntry{
+			[]ViaElem{
 				{"HTTP/1.0", "foo", ""},
 				{"HTTP/1.0", "bar", ""},
 				{"HTTP/1.0", "baz", ""},
@@ -177,34 +177,34 @@ func TestVia(t *testing.T) {
 				"HTTP/2 foo",
 				"FSTR/3 bar (some new protocol)",
 			}},
-			[]ViaEntry{
+			[]ViaElem{
 				{"HTTP/2", "foo", ""},
 				{"FSTR/3", "bar", "some new protocol"},
 			},
 		},
 		{
 			http.Header{"Via": []string{"1.1 foo (comment (with) nesting)"}},
-			[]ViaEntry{{"HTTP/1.1", "foo", "comment (with) nesting"}},
+			[]ViaElem{{"HTTP/1.1", "foo", "comment (with) nesting"}},
 		},
 		{
 			http.Header{"Via": []string{"1.1 foo (comment (with nesting))"}},
-			[]ViaEntry{{"HTTP/1.1", "foo", "comment (with nesting)"}},
+			[]ViaElem{{"HTTP/1.1", "foo", "comment (with nesting)"}},
 		},
 		{
 			http.Header{"Via": []string{`1.1 foo (comment with \) quoting)`}},
-			[]ViaEntry{{"HTTP/1.1", "foo", "comment with ) quoting"}},
+			[]ViaElem{{"HTTP/1.1", "foo", "comment with ) quoting"}},
 		},
 		{
 			http.Header{"Via": []string{
 				`1.1 foo (comment (with \) quoting) and nesting)`,
 			}},
-			[]ViaEntry{
+			[]ViaElem{
 				{"HTTP/1.1", "foo", "comment (with ) quoting) and nesting"},
 			},
 		},
 		{
 			http.Header{"Via": []string{`1.1 foo (\strange quoting)`}},
-			[]ViaEntry{{"HTTP/1.1", "foo", "strange quoting"}},
+			[]ViaElem{{"HTTP/1.1", "foo", "strange quoting"}},
 		},
 
 		// Invalid headers.
@@ -212,11 +212,11 @@ func TestVia(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Via": []string{"1.0"}},
-			[]ViaEntry{{"HTTP/1.0", "", ""}},
+			[]ViaElem{{"HTTP/1.0", "", ""}},
 		},
 		{
 			http.Header{"Via": []string{"1.0, 1.1 foo, 1.2, 1.3 bar"}},
-			[]ViaEntry{
+			[]ViaElem{
 				{"HTTP/1.0", "", ""},
 				{"HTTP/1.1", "foo", ""},
 				{"HTTP/1.2", "", ""},
@@ -228,14 +228,14 @@ func TestVia(t *testing.T) {
 				"1.1 foo (unterminated",
 				"1.1 bar",
 			}},
-			[]ViaEntry{
+			[]ViaElem{
 				{"HTTP/1.1", "foo", "unterminated"},
 				{"HTTP/1.1", "bar", ""},
 			},
 		},
 		{
 			http.Header{"Via": []string{"1.1 foo (unterminated (with nesting)",}},
-			[]ViaEntry{
+			[]ViaElem{
 				{"HTTP/1.1", "foo", "unterminated (with nesting)"},
 			},
 		},
@@ -244,7 +244,7 @@ func TestVia(t *testing.T) {
 				`1.1 foo (unterminated with \quoting (and nesting`,
 				"1.1 bar",
 			}},
-			[]ViaEntry{
+			[]ViaElem{
 				{"HTTP/1.1", "foo", "unterminated with quoting (and nesting"},
 				{"HTTP/1.1", "bar", ""},
 			},
@@ -265,7 +265,7 @@ func ExampleWarning() {
 
 func ExampleAddWarning() {
 	header := http.Header{}
-	AddWarning(header, WarningEntry{
+	AddWarning(header, WarningElem{
 		Code:  299,
 		Agent: "-",
 		Text:  "something is fishy",
@@ -277,32 +277,32 @@ func ExampleAddWarning() {
 func TestWarning(t *testing.T) {
 	tests := []struct {
 		header http.Header
-		result []WarningEntry
+		result []WarningElem
 	}{
 		// Valid headers.
 		{
 			http.Header{"Warning": []string{`299 - "good"`}},
-			[]WarningEntry{{299, "-", "good", time.Time{}}},
+			[]WarningElem{{299, "-", "good", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`299 example.net:80 "good"`}},
-			[]WarningEntry{{299, "example.net:80", "good", time.Time{}}},
+			[]WarningElem{{299, "example.net:80", "good", time.Time{}}},
 		},
 		{
 			// See RFC 6874.
 			http.Header{"Warning": []string{`299 [fe80::a%25en1]:80 "good"`}},
-			[]WarningEntry{{299, "[fe80::a%25en1]:80", "good", time.Time{}}},
+			[]WarningElem{{299, "[fe80::a%25en1]:80", "good", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`199 - "good", 299 - "better"`}},
-			[]WarningEntry{
+			[]WarningElem{
 				{199, "-", "good", time.Time{}},
 				{299, "-", "better", time.Time{}},
 			},
 		},
 		{
 			http.Header{"Warning": []string{`199 - "good" , 299 - "better"`}},
-			[]WarningEntry{
+			[]WarningElem{
 				{199, "-", "good", time.Time{}},
 				{299, "-", "better", time.Time{}},
 			},
@@ -311,7 +311,7 @@ func TestWarning(t *testing.T) {
 			http.Header{"Warning": []string{
 				`299 - "good" "Sat, 06 Jul 2019 05:45:48 GMT"`,
 			}},
-			[]WarningEntry{{
+			[]WarningElem{{
 				299, "-", "good",
 				time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
 			}},
@@ -320,7 +320,7 @@ func TestWarning(t *testing.T) {
 			http.Header{"Warning": []string{
 				`199 - "good" "Sat, 06 Jul 2019 05:45:48 GMT",299 - "better"`,
 			}},
-			[]WarningEntry{
+			[]WarningElem{
 				{
 					199, "-", "good",
 					time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
@@ -335,7 +335,7 @@ func TestWarning(t *testing.T) {
 			http.Header{"Warning": []string{
 				`199 - "good" "Sat, 06 Jul 2019 05:45:48 GMT"\t,299 - "better"`,
 			}},
-			[]WarningEntry{
+			[]WarningElem{
 				{
 					199, "-", "good",
 					time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
@@ -348,15 +348,15 @@ func TestWarning(t *testing.T) {
 		},
 		{
 			http.Header{"Warning": []string{`299 - "with \"escaped\" quotes"`}},
-			[]WarningEntry{{299, "-", `with "escaped" quotes`, time.Time{}}},
+			[]WarningElem{{299, "-", `with "escaped" quotes`, time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`299 - "\"escaped\" quotes"`}},
-			[]WarningEntry{{299, "-", `"escaped" quotes`, time.Time{}}},
+			[]WarningElem{{299, "-", `"escaped" quotes`, time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`299 - "with \"escaped\""`}},
-			[]WarningEntry{{299, "-", `with "escaped"`, time.Time{}}},
+			[]WarningElem{{299, "-", `with "escaped"`, time.Time{}}},
 		},
 
 		// Invalid headers.
@@ -364,45 +364,45 @@ func TestWarning(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Warning": []string{"299"}},
-			[]WarningEntry{{299, "", "", time.Time{}}},
+			[]WarningElem{{299, "", "", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{"299 -"}},
-			[]WarningEntry{{299, "-", "", time.Time{}}},
+			[]WarningElem{{299, "-", "", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{"299 - unquoted"}},
-			[]WarningEntry{{299, "-", "", time.Time{}}},
+			[]WarningElem{{299, "-", "", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`299  - "two spaces"`}},
-			[]WarningEntry{{299, "-", "two spaces", time.Time{}}},
+			[]WarningElem{{299, "-", "two spaces", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`?????,299 - "good"`}},
-			[]WarningEntry{
+			[]WarningElem{
 				{0, "", "", time.Time{}},
 				{299, "-", "good", time.Time{}},
 			},
 		},
 		{
 			http.Header{"Warning": []string{`299  bad, 299 - "good"`}},
-			[]WarningEntry{
+			[]WarningElem{
 				{299, "bad", "", time.Time{}},
 				{299, "-", "good", time.Time{}},
 			},
 		},
 		{
 			http.Header{"Warning": []string{`299 - "good" "bad date"`}},
-			[]WarningEntry{{299, "-", "good", time.Time{}}},
+			[]WarningElem{{299, "-", "good", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`299 - "unterminated`}},
-			[]WarningEntry{{299, "-", "unterminated", time.Time{}}},
+			[]WarningElem{{299, "-", "unterminated", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`299 - "unterminated\"`}},
-			[]WarningEntry{{299, "-", `unterminated"`, time.Time{}}},
+			[]WarningElem{{299, "-", `unterminated"`, time.Time{}}},
 		},
 	}
 	for _, test := range tests {

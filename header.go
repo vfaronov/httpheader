@@ -58,10 +58,10 @@ func AddVary(h http.Header, names []string) {
 }
 
 // Via parses the Via header from h (RFC 7230 Section 5.7.1).
-func Via(h http.Header) []ViaEntry {
-	var elems []ViaEntry
+func Via(h http.Header) []ViaElem {
+	var elems []ViaElem
 	for v, vs := iterElems("", h["Via"]); vs != nil; v, vs = iterElems(v, vs) {
-		var elem ViaEntry
+		var elem ViaElem
 		elem.ReceivedProto, v = consumeItem(v)
 		if strings.IndexByte(elem.ReceivedProto, '/') == -1 {
 			elem.ReceivedProto = "HTTP/" + elem.ReceivedProto
@@ -78,44 +78,44 @@ func Via(h http.Header) []ViaEntry {
 }
 
 // SetVia replaces the Via header in h. See also AddVia.
-func SetVia(h http.Header, entries []ViaEntry) {
-	h.Set("Via", buildVia(entries))
+func SetVia(h http.Header, elems []ViaElem) {
+	h.Set("Via", buildVia(elems))
 }
 
 // AddVia appends to the Via header in h.
-func AddVia(h http.Header, entry ViaEntry) {
-	h.Add("Via", buildVia([]ViaEntry{entry}))
+func AddVia(h http.Header, elem ViaElem) {
+	h.Add("Via", buildVia([]ViaElem{elem}))
 }
 
-func buildVia(entries []ViaEntry) string {
+func buildVia(elems []ViaElem) string {
 	b := &strings.Builder{}
-	for i, entry := range entries {
+	for i, elem := range elems {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		b.WriteString(strings.TrimPrefix(entry.ReceivedProto, "HTTP/"))
+		b.WriteString(strings.TrimPrefix(elem.ReceivedProto, "HTTP/"))
 		b.WriteString(" ")
-		b.WriteString(entry.ReceivedBy)
-		if entry.Comment != "" {
+		b.WriteString(elem.ReceivedBy)
+		if elem.Comment != "" {
 			b.WriteString(" ")
-			writeDelimited(b, entry.Comment, '(', ')')
+			writeDelimited(b, elem.Comment, '(', ')')
 		}
 	}
 	return b.String()
 }
 
-// A ViaEntry represents one element of the Via header (RFC 7230 Section 5.7.1).
-type ViaEntry struct {
+// A ViaElem represents one element of the Via header (RFC 7230 Section 5.7.1).
+type ViaElem struct {
 	ReceivedProto string // always includes name: "HTTP/1.1", not "1.1"
 	ReceivedBy    string
 	Comment       string
 }
 
 // Warning parses the Warning header from h (RFC 7234 Section 5.5).
-func Warning(h http.Header) []WarningEntry {
-	var elems []WarningEntry
+func Warning(h http.Header) []WarningElem {
+	var elems []WarningElem
 	for v, vs := iterElems("", h["Warning"]); vs != nil; v, vs = iterElems(v, vs) {
-		var elem WarningEntry
+		var elem WarningElem
 		var codeStr string
 		codeStr, v = consumeItem(v)
 		elem.Code, _ = strconv.Atoi(codeStr)
@@ -136,9 +136,9 @@ func Warning(h http.Header) []WarningEntry {
 	return elems
 }
 
-// A WarningEntry represents one element of the Warning header
+// A WarningElem represents one element of the Warning header
 // (RFC 7234 Section 5.5).
-type WarningEntry struct {
+type WarningElem struct {
 	Code  int
 	Agent string
 	Text  string
@@ -146,29 +146,29 @@ type WarningEntry struct {
 }
 
 // SetWarning replaces the Warning header in h. See also AddWarning.
-func SetWarning(h http.Header, entries []WarningEntry) {
-	h.Set("Warning", buildWarning(entries))
+func SetWarning(h http.Header, elems []WarningElem) {
+	h.Set("Warning", buildWarning(elems))
 }
 
 // AddWarning appends to the Warning header in h.
-func AddWarning(h http.Header, entry WarningEntry) {
-	h.Add("Warning", buildWarning([]WarningEntry{entry}))
+func AddWarning(h http.Header, elem WarningElem) {
+	h.Add("Warning", buildWarning([]WarningElem{elem}))
 }
 
-func buildWarning(entries []WarningEntry) string {
+func buildWarning(elems []WarningElem) string {
 	b := &strings.Builder{}
-	for i, entry := range entries {
+	for i, elem := range elems {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		b.WriteString(strconv.Itoa(entry.Code))
+		b.WriteString(strconv.Itoa(elem.Code))
 		b.WriteString(" ")
-		b.WriteString(entry.Agent)
+		b.WriteString(elem.Agent)
 		b.WriteString(" ")
-		writeDelimited(b, entry.Text, '"', '"')
-		if !entry.Date.IsZero() {
+		writeDelimited(b, elem.Text, '"', '"')
+		if !elem.Date.IsZero() {
 			b.WriteString(` "`)
-			b.WriteString(entry.Date.Format(http.TimeFormat))
+			b.WriteString(elem.Date.Format(http.TimeFormat))
 			b.WriteString(`"`)
 		}
 	}
