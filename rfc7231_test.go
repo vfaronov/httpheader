@@ -18,6 +18,10 @@ func ExampleSetAllow() {
 	SetAllow(header, []string{"GET", "HEAD", "OPTIONS"})
 }
 
+func TestAllowFuzz(t *testing.T) {
+	checkFuzz(t, "Allow", Allow, SetAllow)
+}
+
 func TestAllowRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetAllow, Allow, func(r *rand.Rand) interface{} {
 		methods := mkSlice(r, mkToken).([]string)
@@ -120,6 +124,10 @@ func ExampleVary() {
 	header := http.Header{"Vary": {"cookie, accept-encoding"}}
 	fmt.Printf("%q", Vary(header))
 	// Output: ["Cookie" "Accept-Encoding"]
+}
+
+func TestVaryFuzz(t *testing.T) {
+	checkFuzz(t, "Vary", Vary, SetVary)
 }
 
 func TestVaryRoundTrip(t *testing.T) {

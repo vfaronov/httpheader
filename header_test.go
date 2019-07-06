@@ -25,6 +25,34 @@ func checkSerialize(t *testing.T, input interface{}, expected, actual http.Heade
 	}
 }
 
+func checkFuzz(t *testing.T, name string, parseFunc, serializeFunc interface{}) {
+	// Simplistic fuzz testing: On any input, the parse function must not panic,
+	// and the serialize function must not panic on the result of the parse.
+	t.Helper()
+	parseFuncV := reflect.ValueOf(parseFunc)
+	serializeFuncV := reflect.ValueOf(serializeFunc)
+	for i := 0; i < 1000; i++ {
+		t.Run("", func(t *testing.T) {
+			r := rand.New(rand.NewSource(int64(i)))
+			header := http.Header{}
+			headerV := reflect.ValueOf(header)
+			for i := 0; i < 1+r.Intn(3); i++ {
+				b := make([]byte, r.Intn(32))
+				for j := range b {
+					// Biased towards punctuation, to trigger more parser states.
+					const chars = " \t,;=-()'*/\"\\abcdefghijklmnopqrstuvwxyz"
+					b[j] = chars[r.Intn(len(chars))]
+				}
+				header.Add(name, string(b))
+			}
+			t.Logf("header: %#v", header)
+			resultV := parseFuncV.Call([]reflect.Value{headerV})[0]
+			t.Logf("parsed: %#v", resultV.Interface())
+			serializeFuncV.Call([]reflect.Value{headerV, resultV})
+		})
+	}
+}
+
 func checkRoundTrip(
 	t *testing.T,
 	serializeFunc, parseFunc interface{},

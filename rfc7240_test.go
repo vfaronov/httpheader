@@ -197,6 +197,10 @@ func TestSetPrefer(t *testing.T) {
 	}
 }
 
+func TestPreferFuzz(t *testing.T) {
+	checkFuzz(t, "Prefer", Prefer, SetPrefer)
+}
+
 func TestPreferRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetPrefer, Prefer, func(r *rand.Rand) interface{} {
 		return mkMap(r, mkLowerToken, func(r *rand.Rand) interface{} {

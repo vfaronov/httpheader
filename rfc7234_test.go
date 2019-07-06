@@ -160,6 +160,10 @@ func TestWarning(t *testing.T) {
 	}
 }
 
+func TestWarningFuzz(t *testing.T) {
+	checkFuzz(t, "Warning", Warning, SetWarning)
+}
+
 func TestWarningRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetWarning, Warning, func(r *rand.Rand) interface{} {
 		return mkSlice(r, func(r *rand.Rand) interface{} {
