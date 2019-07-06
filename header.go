@@ -28,6 +28,7 @@ func Allow(h http.Header) []string {
 }
 
 // SetAllow replaces the Allow header in h.
+// Each of methods must be valid as per RFC 7230 Section 7.1.1.
 func SetAllow(h http.Header, methods []string) {
 	h.Set("Allow", strings.Join(methods, ", "))
 }
@@ -47,12 +48,14 @@ func Vary(h http.Header) []string {
 	return names
 }
 
-// SetVary replaces the Vary header in h. See also AddVary.
+// SetVary replaces the Vary header in h.
+// Each of names must be a valid field-name as per RFC 7230 Section 3.2.
+// See also AddVary.
 func SetVary(h http.Header, names []string) {
 	h.Set("Vary", strings.Join(names, ", "))
 }
 
-// AddVary appends to the Vary header in h.
+// AddVary is like SetVary but appends instead of replacing.
 func AddVary(h http.Header, names []string) {
 	h.Add("Vary", strings.Join(names, ", "))
 }
@@ -77,12 +80,16 @@ func Via(h http.Header) []ViaElem {
 	return elems
 }
 
-// SetVia replaces the Via header in h. See also AddVia.
+// SetVia replaces the Via header in h.
+// In each of elems, ReceivedProto and ReceivedBy must be valid
+// as per RFC 7230 Section 5.7.1; Comment may contain any text,
+// which will be escaped automatically.
+// See also AddVia.
 func SetVia(h http.Header, elems []ViaElem) {
 	h.Set("Via", buildVia(elems))
 }
 
-// AddVia appends to the Via header in h.
+// AddVia is like SetVia but appends instead of replacing.
 func AddVia(h http.Header, elem ViaElem) {
 	h.Add("Via", buildVia([]ViaElem{elem}))
 }
@@ -106,7 +113,7 @@ func buildVia(elems []ViaElem) string {
 
 // A ViaElem represents one element of the Via header (RFC 7230 Section 5.7.1).
 type ViaElem struct {
-	ReceivedProto string // always includes name: "HTTP/1.1", not "1.1"
+	ReceivedProto string // canonicalized to include name: "HTTP/1.1", not "1.1"
 	ReceivedBy    string
 	Comment       string
 }
@@ -145,12 +152,15 @@ type WarningElem struct {
 	Date  time.Time // zero if missing
 }
 
-// SetWarning replaces the Warning header in h. See also AddWarning.
+// SetWarning replaces the Warning header in h.
+// In each of elems, Code and Agent must be valid as per RFC 7234 Section 5.5;
+// Text may contain any text, which will be escaped automatically.
+// See also AddWarning.
 func SetWarning(h http.Header, elems []WarningElem) {
 	h.Set("Warning", buildWarning(elems))
 }
 
-// AddWarning appends to the Warning header in h.
+// AddWarning is like SetWarning but appends instead of replacing.
 func AddWarning(h http.Header, elem WarningElem) {
 	h.Add("Warning", buildWarning([]WarningElem{elem}))
 }
