@@ -35,7 +35,6 @@ func checkFuzz(t *testing.T, name string, parseFunc, serializeFunc interface{}) 
 		t.Run("", func(t *testing.T) {
 			r := rand.New(rand.NewSource(int64(i)))
 			header := http.Header{}
-			headerV := reflect.ValueOf(header)
 			for i := 0; i < 1+r.Intn(3); i++ {
 				b := make([]byte, r.Intn(32))
 				for j := range b {
@@ -46,8 +45,9 @@ func checkFuzz(t *testing.T, name string, parseFunc, serializeFunc interface{}) 
 				header.Add(name, string(b))
 			}
 			t.Logf("header: %#v", header)
+			headerV := reflect.ValueOf(header)
 			resultV := parseFuncV.Call([]reflect.Value{headerV})[0]
-			t.Logf("parsed: %#v", resultV.Interface())
+			t.Logf("parsed: %#v", resultV)
 			serializeFuncV.Call([]reflect.Value{headerV, resultV})
 		})
 	}
@@ -68,17 +68,14 @@ func checkRoundTrip(
 	for i := 0; i < 100; i++ {
 		t.Run("", func(t *testing.T) {
 			r := rand.New(rand.NewSource(int64(i)))
-			header := http.Header{}
-			headerV := reflect.ValueOf(header)
-			input := generator(r)
-			inputV := reflect.ValueOf(input)
+			headerV := reflect.ValueOf(http.Header{})
+			inputV := reflect.ValueOf(generator(r))
 			serializeFuncV.Call([]reflect.Value{headerV, inputV})
-			t.Logf("serialized: %#v", header)
+			t.Logf("serialized: %#v", headerV)
 			outputV := parseFuncV.Call([]reflect.Value{headerV})[0]
-			output := outputV.Interface()
-			if !reflect.DeepEqual(input, output) {
+			if !reflect.DeepEqual(inputV.Interface(), outputV.Interface()) {
 				t.Errorf("round-trip failure:\ninput:  %#v\noutput: %#v",
-					input, output)
+					inputV, outputV)
 			}
 		})
 	}
@@ -140,25 +137,20 @@ func mkSlice(r *rand.Rand, value func(*rand.Rand) interface{}) interface{} {
 	}
 	sliceV := reflect.MakeSlice(sliceT, nitems, nitems)
 	for i := 0; i < nitems; i++ {
-		valueV := reflect.ValueOf(value(r))
-		sliceV.Index(i).Set(valueV)
+		sliceV.Index(i).Set(reflect.ValueOf(value(r)))
 	}
 	return sliceV.Interface()
 }
 
 func mkMap(r *rand.Rand, key, value func(*rand.Rand) interface{}) interface{} {
 	nkeys := r.Intn(4)
-	keyT := reflect.TypeOf(key(r))
-	valueT := reflect.TypeOf(value(r))
-	mapT := reflect.MapOf(keyT, valueT)
+	mapT := reflect.MapOf(reflect.TypeOf(key(r)), reflect.TypeOf(value(r)))
 	if nkeys == 0 {
 		return reflect.Zero(mapT).Interface()
 	}
 	mapV := reflect.MakeMap(mapT)
 	for i := 0; i < nkeys; i++ {
-		keyV := reflect.ValueOf(key(r))
-		valueV := reflect.ValueOf(value(r))
-		mapV.SetMapIndex(keyV, valueV)
+		mapV.SetMapIndex(reflect.ValueOf(key(r)), reflect.ValueOf(value(r)))
 	}
 	return mapV.Interface()
 }
