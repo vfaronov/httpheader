@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func ExampleAllow() {
@@ -127,7 +128,7 @@ func ExampleVia() {
 	// Output: [{"HTTP/1.1" "foo.example.com:8080" "corporate"} {"HTTP/2" "bar.example.net" ""}]
 }
 
-var tabVia = []struct{
+var tabVia = []struct {
 	header http.Header
 	result []ViaEntry
 }{
@@ -226,4 +227,105 @@ func ExampleAddVia() {
 	AddVia(header, []ViaEntry{{"HTTP/1.1", "bar", "internal"}})
 	fmt.Printf("%q", header)
 	// Output: map["Via":["1.0 foo" "1.1 bar (internal)"]]
+}
+
+func ExampleWarning() {
+	header := http.Header{"Warning": []string{`299 gw1 "something is wrong"`}}
+	fmt.Printf("%+v", Warning(header))
+	// Output: [{Code:299 Agent:gw1 Text:something is wrong Date:0001-01-01 00:00:00 +0000 UTC}]
+}
+
+var tabWarning = []struct {
+	header http.Header
+	result []WarningEntry
+}{
+	{
+		http.Header{"Warning": []string{`299`}},
+		nil,
+	},
+	{
+		http.Header{"Warning": []string{`299 -`}},
+		[]WarningEntry{{299, "-", "", time.Time{}}},
+	},
+	{
+		http.Header{"Warning": []string{`299 - bad`}},
+		[]WarningEntry{{299, "-", "", time.Time{}}},
+	},
+	{
+		http.Header{"Warning": []string{`299  - "bad"`}},
+		nil,
+	},
+	{
+		http.Header{"Warning": []string{`299 - "good"`}},
+		[]WarningEntry{{299, "-", "good", time.Time{}}},
+	},
+	{
+		http.Header{"Warning": []string{`299  bad, 299 - "good"`}},
+		[]WarningEntry{{299, "-", "good", time.Time{}}},
+	},
+	{
+		http.Header{"Warning": []string{`199 - "good", 299 - "better"`}},
+		[]WarningEntry{
+			{199, "-", "good", time.Time{}},
+			{299, "-", "better", time.Time{}},
+		},
+	},
+	{
+		http.Header{"Warning": []string{`199 - "good" , 299 - "better"`}},
+		[]WarningEntry{
+			{199, "-", "good", time.Time{}},
+			{299, "-", "better", time.Time{}},
+		},
+	},
+	{
+		http.Header{"Warning": []string{
+			`299 example.net:80 "good" "Sat, 06 Jul 2019 05:45:48 GMT"`,
+		}},
+		[]WarningEntry{{
+			299, "example.net:80", "good",
+			time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
+		}},
+	},
+	{
+		http.Header{"Warning": []string{
+			`199 - "good" "Sat, 06 Jul 2019 05:45:48 GMT",299 - "better"`,
+		}},
+		[]WarningEntry{
+			{
+				199, "-", "good",
+				time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
+			},
+			{
+				299, "-", "better",
+				time.Time{},
+			},
+		},
+	},
+	{
+		http.Header{"Warning": []string{`299 example.net:80 "good" "bad date"`}},
+		[]WarningEntry{{299, "example.net:80", "good", time.Time{}}},
+	},
+}
+
+func TestWarning(t *testing.T) {
+	for _, tt := range tabWarning {
+		t.Run("", func(t *testing.T) {
+			result := Warning(tt.header)
+			if !reflect.DeepEqual(result, tt.result) {
+				t.Errorf("on %#v: got %#v, wanted %#v",
+					tt.header, result, tt.result)
+			}
+		})
+	}
+}
+
+func ExampleAddWarning() {
+	header := http.Header{}
+	AddWarning(header, WarningEntry{
+		Code:  299,
+		Agent: "-",
+		Text:  "something is fishy",
+	})
+	fmt.Printf("%q", header)
+	// Output: map["Warning":["299 - \"something is fishy\""]]
 }

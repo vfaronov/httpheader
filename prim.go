@@ -25,6 +25,13 @@ func peek(v string) byte {
 	return v[0]
 }
 
+func consume(v string, ch byte) (string, bool) {
+	if peek(v) != ch {
+		return v, false
+	}
+	return v[1:], true
+}
+
 func toNextElem(v string, vs []string) (string, []string) {
 	// Skip over any possible unparsed junk at the front.
 	for v != "" && v[0] != ',' {
@@ -73,6 +80,19 @@ func token(v string) (tok, rest string) {
 		}
 	}
 	return v, ""
+}
+
+func number(v string) (n int, rest string) {
+	i := 0
+	for ; i < len(v); i++ {
+		if v[i] >= '0' && v[i] <= '9' {
+			n = (n * 10) + int(v[i] - '0')
+		} else {
+			break
+		}
+	}
+	rest = v[i:]
+	return
 }
 
 func quoted(v string) (text, rest string) {

@@ -2,7 +2,9 @@ package httpheader
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Allow returns a slice of method names from the Allow field in h
@@ -111,4 +113,75 @@ type ViaEntry struct {
 	ReceivedProto string // always includes name: "HTTP/1.1", not "1.1"
 	ReceivedBy    string
 	Comment       string
+}
+
+// Warning returns a slice of entries from the Warning field of h
+// (RFC 7234 Section 5.5).
+func Warning(h http.Header) []WarningEntry {
+	var entries []WarningEntry
+	for v, vs := toNextElem("", h["Warning"]); vs != nil; v, vs = toNextElem(v, vs) {
+		var entry WarningEntry
+		entry.Code, v = number(v)
+		if entry.Code == -1 {
+			continue
+		}
+		var ok bool
+		v, ok = consume(v, ' ')
+		if !ok {
+			continue
+		}
+		entry.Agent, v = chomp(v)
+		if entry.Agent == "" {
+			continue
+		}
+		entry.Text, v = quoted(v)
+		v, ok = consume(v, ' ')
+		if ok {
+			var dateStr string
+			dateStr, v = quoted(v)
+			entry.Date, _ = http.ParseTime(dateStr)
+		}
+		entries = append(entries, entry)
+	}
+	return entries
+}
+
+// A WarningEntry represents one element of the Warning field
+// (RFC 7234 Section 5.5).
+type WarningEntry struct {
+	Code  int
+	Agent string
+	Text  string
+	Date  time.Time // zero if missing
+}
+
+// SetWarning sets the Warning field in h (RFC 7230 Section 5.7.1).
+// See also AddWarning.
+func SetWarning(h http.Header, entries []WarningEntry) {
+	h.Set("Warning", makeWarning(entries))
+}
+
+// AddWarning appends to the Warning field in h (RFC 7230 Section 5.7.1).
+func AddWarning(h http.Header, entry WarningEntry) {
+	h.Add("Warning", makeWarning([]WarningEntry{entry}))
+}
+
+func makeWarning(entries []WarningEntry) string {
+	b := &strings.Builder{}
+	for i, entry := range entries {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(strconv.Itoa(entry.Code))
+		b.WriteString(" ")
+		b.WriteString(entry.Agent)
+		b.WriteString(" ")
+		writeDelimited(b, entry.Text, '"', '"')
+		if !entry.Date.IsZero() {
+			b.WriteString(` "`)
+			b.WriteString(entry.Date.Format(http.TimeFormat))
+			b.WriteString(`"`)
+		}
+	}
+	return b.String()
 }
