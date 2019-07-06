@@ -83,6 +83,7 @@ func buildPrefer(prefs map[string]Pref) string {
 			writeTokenOrQuoted(b, pref.Value)
 		}
 		for paramName, paramValue := range pref.Params {
+			b.WriteString(";")
 			b.WriteString(paramName)
 			if paramValue != "" {
 				b.WriteString("=")

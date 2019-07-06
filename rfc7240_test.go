@@ -146,3 +146,52 @@ func TestPrefer(t *testing.T) {
 		})
 	}
 }
+
+func TestSetPrefer(t *testing.T) {
+	tests := []struct{
+		input  map[string]Pref
+		result http.Header
+	}{
+		{
+			map[string]Pref{"respond-async": Pref{}},
+			http.Header{"Prefer": {"respond-async"}},
+		},
+		{
+			map[string]Pref{"wait": {"10", nil}},
+			http.Header{"Prefer": {"wait=10"}},
+		},
+		{
+			map[string]Pref{"foo": {"bar", nil}},
+			http.Header{"Prefer": {"foo=bar"}},
+		},
+		{
+			map[string]Pref{"foo": {"bar baz", nil}},
+			http.Header{"Prefer": {`foo="bar baz"`}},
+		},
+		{
+			map[string]Pref{"foo": {`bar "baz"`, nil}},
+			http.Header{"Prefer": {`foo="bar \"baz\""`}},
+		},
+		{
+			map[string]Pref{"foo": {"", map[string]string{"qux": ""}}},
+			http.Header{"Prefer": {`foo;qux`}},
+		},
+		{
+			map[string]Pref{"foo": {"", map[string]string{"qux": "xyzzy"}}},
+			http.Header{"Prefer": {`foo;qux=xyzzy`}},
+		},
+		{
+			map[string]Pref{
+				"foo": {"", map[string]string{"qux": `quoted "xyzzy"`}},
+			},
+			http.Header{"Prefer": {`foo;qux="quoted \"xyzzy\""`}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			header := http.Header{}
+			SetPrefer(header, test.input)
+			checkSerialize(t, test.input, test.result, header)
+		})
+	}
+}
