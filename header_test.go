@@ -416,7 +416,7 @@ func checkParse(t *testing.T, header http.Header, expected, actual interface{}) 
 func ExamplePrefer() {
 	header := http.Header{"Prefer": []string{
 		"wait=10, respond-async",
-		`Foo; Bar="quux, xyzzy"; Baz`,
+		`Foo; Bar="quux, xyzzy"`,
 	}}
 	prefer := Prefer(header)
 	fmt.Printf("%q\n", prefer["wait"])
@@ -424,7 +424,7 @@ func ExamplePrefer() {
 	fmt.Printf("%q\n", prefer["foo"])
 	// Output: {"10" map[]}
 	// {"" map[]}
-	// {"" map["bar":"quux, xyzzy" "baz":""]}
+	// {"" map["bar":"quux, xyzzy"]}
 }
 
 func ExampleAddPrefer() {
