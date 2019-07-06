@@ -7,7 +7,7 @@ import (
 )
 
 func ExampleAllow() {
-	header := http.Header{"Allow": []string{"GET, HEAD, OPTIONS"}}
+	header := http.Header{"Allow": {"GET, HEAD, OPTIONS"}}
 	fmt.Printf("%q", Allow(header))
 	// Output: ["GET" "HEAD" "OPTIONS"]
 }
@@ -28,46 +28,46 @@ func TestAllow(t *testing.T) {
 			nil,
 		},
 		{
-			http.Header{"Foo": []string{"bar"}},
+			http.Header{"Foo": {"bar"}},
 			nil,
 		},
 		{
-			http.Header{"Allow": []string{""}},
+			http.Header{"Allow": {""}},
 			[]string{},
 		},
 		{
-			http.Header{"Allow": []string{
+			http.Header{"Allow": {
 				"",
 				"",
 			}},
 			[]string{},
 		},
 		{
-			http.Header{"Allow": []string{"GET"}},
+			http.Header{"Allow": {"GET"}},
 			[]string{"GET"},
 		},
 		{
-			http.Header{"Allow": []string{"GET,"}},
+			http.Header{"Allow": {"GET,"}},
 			[]string{"GET"},
 		},
 		{
-			http.Header{"Allow": []string{",GET"}},
+			http.Header{"Allow": {",GET"}},
 			[]string{"GET"},
 		},
 		{
-			http.Header{"Allow": []string{"  ,\t ,, GET, , "}},
+			http.Header{"Allow": {"  ,\t ,, GET, , "}},
 			[]string{"GET"},
 		},
 		{
-			http.Header{"Allow": []string{"GET,HEAD"}},
+			http.Header{"Allow": {"GET,HEAD"}},
 			[]string{"GET", "HEAD"},
 		},
 		{
-			http.Header{"Allow": []string{"GET, HEAD"}},
+			http.Header{"Allow": {"GET, HEAD"}},
 			[]string{"GET", "HEAD"},
 		},
 		{
-			http.Header{"Allow": []string{
+			http.Header{"Allow": {
 				"GET",
 				"HEAD",
 				"OPTIONS",
@@ -75,7 +75,7 @@ func TestAllow(t *testing.T) {
 			[]string{"GET", "HEAD", "OPTIONS"},
 		},
 		{
-			http.Header{"Allow": []string{
+			http.Header{"Allow": {
 				"GET\t,\t  HEAD\t",
 				"\tOPTIONS",
 			}},
@@ -86,15 +86,15 @@ func TestAllow(t *testing.T) {
 		// Precise outputs on them are not a guaranteed part of the API.
 		// They may change as convenient for the parsing code.
 		{
-			http.Header{"Allow": []string{";;;"}},
+			http.Header{"Allow": {";;;"}},
 			[]string{},
 		},
 		{
-			http.Header{"Allow": []string{";;;,GET"}},
+			http.Header{"Allow": {";;;,GET"}},
 			[]string{"GET"},
 		},
 		{
-			http.Header{"Allow": []string{"GET;;;whatever, HEAD"}},
+			http.Header{"Allow": {"GET;;;whatever, HEAD"}},
 			[]string{"GET", "HEAD"},
 		},
 	}
@@ -106,7 +106,7 @@ func TestAllow(t *testing.T) {
 }
 
 func ExampleVary() {
-	header := http.Header{"Vary": []string{"cookie, accept-encoding"}}
+	header := http.Header{"Vary": {"cookie, accept-encoding"}}
 	fmt.Printf("%q", Vary(header))
 	// Output: ["Cookie" "Accept-Encoding"]
 }

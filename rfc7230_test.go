@@ -7,7 +7,7 @@ import (
 )
 
 func ExampleVia() {
-	header := http.Header{"Via": []string{
+	header := http.Header{"Via": {
 		"1.1 foo.example.com:8080 (corporate)",
 		"2 bar.example.net",
 	}}
@@ -16,7 +16,7 @@ func ExampleVia() {
 }
 
 func ExampleAddVia() {
-	header := http.Header{"Via": []string{"1.0 foo"}}
+	header := http.Header{"Via": {"1.0 foo"}}
 	AddVia(header, ViaElem{
 		ReceivedProto: "HTTP/1.1",
 		ReceivedBy:    "my-service",
@@ -30,27 +30,27 @@ func TestVia(t *testing.T) {
 	}{
 		// Valid headers.
 		{
-			http.Header{"Via": []string{"1.0 foo"}},
+			http.Header{"Via": {"1.0 foo"}},
 			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
-			http.Header{"Via": []string{"1.0 \tfoo"}},
+			http.Header{"Via": {"1.0 \tfoo"}},
 			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
-			http.Header{"Via": []string{"1.0 foo  "}},
+			http.Header{"Via": {"1.0 foo  "}},
 			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
-			http.Header{"Via": []string{"1.0 foo  ,"}},
+			http.Header{"Via": {"1.0 foo  ,"}},
 			[]ViaElem{{"HTTP/1.0", "foo", ""}},
 		},
 		{
-			http.Header{"Via": []string{"1.0 foo\t (comment)"}},
+			http.Header{"Via": {"1.0 foo\t (comment)"}},
 			[]ViaElem{{"HTTP/1.0", "foo", "comment"}},
 		},
 		{
-			http.Header{"Via": []string{
+			http.Header{"Via": {
 				"1.0 foo,1.0   bar\t, \t 1.0 baz,,",
 				"1.1 qux",
 			}},
@@ -62,7 +62,7 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": []string{
+			http.Header{"Via": {
 				"HTTP/2 foo",
 				"FSTR/3 bar (some new protocol)",
 			}},
@@ -72,19 +72,19 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": []string{"1.1 foo (comment (with) nesting)"}},
+			http.Header{"Via": {"1.1 foo (comment (with) nesting)"}},
 			[]ViaElem{{"HTTP/1.1", "foo", "comment (with) nesting"}},
 		},
 		{
-			http.Header{"Via": []string{"1.1 foo (comment (with nesting))"}},
+			http.Header{"Via": {"1.1 foo (comment (with nesting))"}},
 			[]ViaElem{{"HTTP/1.1", "foo", "comment (with nesting)"}},
 		},
 		{
-			http.Header{"Via": []string{`1.1 foo (comment with \) quoting)`}},
+			http.Header{"Via": {`1.1 foo (comment with \) quoting)`}},
 			[]ViaElem{{"HTTP/1.1", "foo", "comment with ) quoting"}},
 		},
 		{
-			http.Header{"Via": []string{
+			http.Header{"Via": {
 				`1.1 foo (comment (with \) quoting) and nesting)`,
 			}},
 			[]ViaElem{
@@ -92,7 +92,7 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": []string{`1.1 foo (\strange quoting)`}},
+			http.Header{"Via": {`1.1 foo (\strange quoting)`}},
 			[]ViaElem{{"HTTP/1.1", "foo", "strange quoting"}},
 		},
 
@@ -100,11 +100,11 @@ func TestVia(t *testing.T) {
 		// Precise outputs on them are not a guaranteed part of the API.
 		// They may change as convenient for the parsing code.
 		{
-			http.Header{"Via": []string{"1.0"}},
+			http.Header{"Via": {"1.0"}},
 			[]ViaElem{{"HTTP/1.0", "", ""}},
 		},
 		{
-			http.Header{"Via": []string{"1.0, 1.1 foo, 1.2, 1.3 bar"}},
+			http.Header{"Via": {"1.0, 1.1 foo, 1.2, 1.3 bar"}},
 			[]ViaElem{
 				{"HTTP/1.0", "", ""},
 				{"HTTP/1.1", "foo", ""},
@@ -113,7 +113,7 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": []string{
+			http.Header{"Via": {
 				"1.1 foo (unterminated",
 				"1.1 bar",
 			}},
@@ -123,13 +123,13 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": []string{"1.1 foo (unterminated (with nesting)"}},
+			http.Header{"Via": {"1.1 foo (unterminated (with nesting)"}},
 			[]ViaElem{
 				{"HTTP/1.1", "foo", "unterminated (with nesting)"},
 			},
 		},
 		{
-			http.Header{"Via": []string{
+			http.Header{"Via": {
 				`1.1 foo (unterminated with \quoting (and nesting`,
 				"1.1 bar",
 			}},

@@ -8,7 +8,7 @@ import (
 )
 
 func ExampleWarning() {
-	header := http.Header{"Warning": []string{`299 gw1 "something is wrong"`}}
+	header := http.Header{"Warning": {`299 gw1 "something is wrong"`}}
 	fmt.Printf("%+v", Warning(header))
 	// Output: [{Code:299 Agent:gw1 Text:something is wrong Date:0001-01-01 00:00:00 +0000 UTC}]
 }
@@ -28,34 +28,34 @@ func TestWarning(t *testing.T) {
 	}{
 		// Valid headers.
 		{
-			http.Header{"Warning": []string{`299 - "good"`}},
+			http.Header{"Warning": {`299 - "good"`}},
 			[]WarningElem{{299, "-", "good", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`299 example.net:80 "good"`}},
+			http.Header{"Warning": {`299 example.net:80 "good"`}},
 			[]WarningElem{{299, "example.net:80", "good", time.Time{}}},
 		},
 		{
 			// See RFC 6874.
-			http.Header{"Warning": []string{`299 [fe80::a%25en1]:80 "good"`}},
+			http.Header{"Warning": {`299 [fe80::a%25en1]:80 "good"`}},
 			[]WarningElem{{299, "[fe80::a%25en1]:80", "good", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`199 - "good", 299 - "better"`}},
+			http.Header{"Warning": {`199 - "good", 299 - "better"`}},
 			[]WarningElem{
 				{199, "-", "good", time.Time{}},
 				{299, "-", "better", time.Time{}},
 			},
 		},
 		{
-			http.Header{"Warning": []string{`199 - "good" , 299 - "better"`}},
+			http.Header{"Warning": {`199 - "good" , 299 - "better"`}},
 			[]WarningElem{
 				{199, "-", "good", time.Time{}},
 				{299, "-", "better", time.Time{}},
 			},
 		},
 		{
-			http.Header{"Warning": []string{
+			http.Header{"Warning": {
 				`299 - "good" "Sat, 06 Jul 2019 05:45:48 GMT"`,
 			}},
 			[]WarningElem{{
@@ -64,7 +64,7 @@ func TestWarning(t *testing.T) {
 			}},
 		},
 		{
-			http.Header{"Warning": []string{
+			http.Header{"Warning": {
 				`199 - "good" "Sat, 06 Jul 2019 05:45:48 GMT",299 - "better"`,
 			}},
 			[]WarningElem{
@@ -79,7 +79,7 @@ func TestWarning(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Warning": []string{
+			http.Header{"Warning": {
 				`199 - "good" "Sat, 06 Jul 2019 05:45:48 GMT"\t,299 - "better"`,
 			}},
 			[]WarningElem{
@@ -94,15 +94,15 @@ func TestWarning(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Warning": []string{`299 - "with \"escaped\" quotes"`}},
+			http.Header{"Warning": {`299 - "with \"escaped\" quotes"`}},
 			[]WarningElem{{299, "-", `with "escaped" quotes`, time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`299 - "\"escaped\" quotes"`}},
+			http.Header{"Warning": {`299 - "\"escaped\" quotes"`}},
 			[]WarningElem{{299, "-", `"escaped" quotes`, time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`299 - "with \"escaped\""`}},
+			http.Header{"Warning": {`299 - "with \"escaped\""`}},
 			[]WarningElem{{299, "-", `with "escaped"`, time.Time{}}},
 		},
 
@@ -110,45 +110,45 @@ func TestWarning(t *testing.T) {
 		// Precise outputs on them are not a guaranteed part of the API.
 		// They may change as convenient for the parsing code.
 		{
-			http.Header{"Warning": []string{"299"}},
+			http.Header{"Warning": {"299"}},
 			[]WarningElem{{299, "", "", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{"299 -"}},
+			http.Header{"Warning": {"299 -"}},
 			[]WarningElem{{299, "-", "", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{"299 - unquoted"}},
+			http.Header{"Warning": {"299 - unquoted"}},
 			[]WarningElem{{299, "-", "", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`299  - "two spaces"`}},
+			http.Header{"Warning": {`299  - "two spaces"`}},
 			[]WarningElem{{299, "-", "two spaces", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`?????,299 - "good"`}},
+			http.Header{"Warning": {`?????,299 - "good"`}},
 			[]WarningElem{
 				{0, "", "", time.Time{}},
 				{299, "-", "good", time.Time{}},
 			},
 		},
 		{
-			http.Header{"Warning": []string{`299  bad, 299 - "good"`}},
+			http.Header{"Warning": {`299  bad, 299 - "good"`}},
 			[]WarningElem{
 				{299, "bad", "", time.Time{}},
 				{299, "-", "good", time.Time{}},
 			},
 		},
 		{
-			http.Header{"Warning": []string{`299 - "good" "bad date"`}},
+			http.Header{"Warning": {`299 - "good" "bad date"`}},
 			[]WarningElem{{299, "-", "good", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`299 - "unterminated`}},
+			http.Header{"Warning": {`299 - "unterminated`}},
 			[]WarningElem{{299, "-", "unterminated", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`299 - "unterminated\"`}},
+			http.Header{"Warning": {`299 - "unterminated\"`}},
 			[]WarningElem{{299, "-", `unterminated"`, time.Time{}}},
 		},
 	}
