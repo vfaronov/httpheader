@@ -2,6 +2,7 @@ package httpheader
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"testing"
 )
@@ -15,6 +16,16 @@ func ExampleAllow() {
 func ExampleSetAllow() {
 	header := http.Header{}
 	SetAllow(header, []string{"GET", "HEAD", "OPTIONS"})
+}
+
+func TestAllowRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetAllow, Allow, func(r *rand.Rand) interface{} {
+		methods := mkSlice(r, mkToken).([]string)
+		if methods == nil {
+			methods = make([]string, 0)
+		}
+		return methods
+	})
 }
 
 func TestAllow(t *testing.T) {
@@ -109,4 +120,10 @@ func ExampleVary() {
 	header := http.Header{"Vary": {"cookie, accept-encoding"}}
 	fmt.Printf("%q", Vary(header))
 	// Output: ["Cookie" "Accept-Encoding"]
+}
+
+func TestVaryRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetVary, Vary, func(r *rand.Rand) interface{} {
+		return mkSlice(r, mkHeaderName)
+	})
 }
