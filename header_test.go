@@ -80,6 +80,17 @@ func mkHeaderName(r *rand.Rand) interface{} {
 	return http.CanonicalHeaderKey(token)
 }
 
+func mkSlice(r *rand.Rand, value func(*rand.Rand) interface{}) interface{} {
+	nitems := 1 + r.Intn(3)
+	valueT := reflect.TypeOf(value(r))
+	sliceV := reflect.MakeSlice(reflect.SliceOf(valueT), nitems, nitems)
+	for i := 0; i < nitems; i++ {
+		valueV := reflect.ValueOf(value(r))
+		sliceV.Index(i).Set(valueV)
+	}
+	return sliceV.Interface()
+}
+
 func mkMap(r *rand.Rand, key, value func(*rand.Rand) interface{}) interface{} {
 	nkeys := 1 + r.Intn(3)
 	keyT := reflect.TypeOf(key(r))

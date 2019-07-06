@@ -2,6 +2,7 @@ package httpheader
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"testing"
 	"time"
@@ -157,4 +158,22 @@ func TestWarning(t *testing.T) {
 			checkParse(t, test.header, test.result, Warning(test.header))
 		})
 	}
+}
+
+func TestWarningRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetWarning, Warning, func(r *rand.Rand) interface{} {
+		return mkSlice(r, func(r *rand.Rand) interface{} {
+			elem := WarningElem{
+				Code:  100 + r.Intn(900),
+				Agent: mkToken(r).(string),
+			}
+			if r.Intn(2) == 0 {
+				elem.Text = mkString(r).(string)
+			}
+			if r.Intn(2) == 0 {
+				elem.Date = time.Date(2019, time.July, 6, 18, 9, 11, 0, time.UTC)
+			}
+			return elem
+		})
+	})
 }
