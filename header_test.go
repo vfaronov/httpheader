@@ -224,9 +224,12 @@ func TestVia(t *testing.T) {
 
 func ExampleAddVia() {
 	header := http.Header{"Via": []string{"1.0 foo"}}
-	AddVia(header, []ViaEntry{{"HTTP/1.1", "bar", "internal"}})
+	AddVia(header, ViaEntry{
+		ReceivedProto: "HTTP/1.1",
+		ReceivedBy:    "bar",
+	})
 	fmt.Printf("%q", header)
-	// Output: map["Via":["1.0 foo" "1.1 bar (internal)"]]
+	// Output: map["Via":["1.0 foo" "1.1 bar"]]
 }
 
 func ExampleWarning() {
