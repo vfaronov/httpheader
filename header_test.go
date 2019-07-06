@@ -26,6 +26,7 @@ func TestAllow(t *testing.T) {
 		header http.Header
 		result []string
 	}{
+		// Valid headers.
 		{
 			http.Header{},
 			nil,
@@ -50,14 +51,6 @@ func TestAllow(t *testing.T) {
 			[]string{},
 		},
 		{
-			http.Header{"Allow": []string{
-				"",
-				"???",
-				"",
-			}},
-			[]string{},
-		},
-		{
 			http.Header{"Allow": []string{"GET"}},
 			[]string{"GET"},
 		},
@@ -70,17 +63,7 @@ func TestAllow(t *testing.T) {
 			[]string{"GET"},
 		},
 		{
-			http.Header{"Allow": []string{"  , ,, GET, , "}},
-			[]string{"GET"},
-		},
-		{
-			http.Header{"Allow": []string{
-				"",
-				"???",
-				",,,",
-				"GET,,,",
-				"",
-			}},
+			http.Header{"Allow": []string{"  ,\t ,, GET, , "}},
 			[]string{"GET"},
 		},
 		{
@@ -88,17 +71,39 @@ func TestAllow(t *testing.T) {
 			[]string{"GET", "HEAD"},
 		},
 		{
-			http.Header{"Allow": []string{"GET, HEAD, POST"}},
-			[]string{"GET", "HEAD", "POST"},
+			http.Header{"Allow": []string{"GET, HEAD"}},
+			[]string{"GET", "HEAD"},
 		},
 		{
 			http.Header{"Allow": []string{
-				"GET???whatever, HEAD,",
-				"",
-				"",
-				",,OPTIONS",
+				"GET",
+				"HEAD",
+				"OPTIONS",
 			}},
 			[]string{"GET", "HEAD", "OPTIONS"},
+		},
+		{
+			http.Header{"Allow": []string{
+				"GET\t,\t  HEAD\t",
+				"\tOPTIONS",
+			}},
+			[]string{"GET", "HEAD", "OPTIONS"},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Allow": []string{"???"}},
+			[]string{},
+		},
+		{
+			http.Header{"Allow": []string{"???,GET"}},
+			[]string{"GET"},
+		},
+		{
+			http.Header{"Allow": []string{"GET???whatever, HEAD"}},
+			[]string{"GET", "HEAD"},
 		},
 	}
 	for _, test := range tests {
@@ -138,10 +143,7 @@ func TestVia(t *testing.T) {
 		header http.Header
 		result []ViaEntry
 	}{
-		{
-			http.Header{"Via": []string{"1.0"}},
-			nil,
-		},
+		// Valid headers.
 		{
 			http.Header{"Via": []string{"1.0 foo"}},
 			[]ViaEntry{{"HTTP/1.0", "foo", ""}},
@@ -164,25 +166,61 @@ func TestVia(t *testing.T) {
 		},
 		{
 			http.Header{"Via": []string{
-				"1.0 foo, 1.0 bar",
+				"1.0 foo,1.0   bar\t, \t 1.0 baz,,",
 				"1.1 qux",
 			}},
 			[]ViaEntry{
-				{"HTTP/1.0", "foo", ""}, {"HTTP/1.0", "bar", ""},
+				{"HTTP/1.0", "foo", ""},
+				{"HTTP/1.0", "bar", ""},
+				{"HTTP/1.0", "baz", ""},
 				{"HTTP/1.1", "qux", ""},
 			},
 		},
 		{
+			http.Header{"Via": []string{
+				"HTTP/2 foo",
+				"FSTR/3 bar (some new protocol)",
+			}},
+			[]ViaEntry{
+				{"HTTP/2", "foo", ""},
+				{"FSTR/3", "bar", "some new protocol"},
+			},
+		},
+		{
+			http.Header{"Via": []string{"1.1 foo (comment (with) nesting)"}},
+			[]ViaEntry{{"HTTP/1.1", "foo", "comment (with) nesting"}},
+		},
+		{
+			http.Header{"Via": []string{"1.1 foo (comment (with nesting))"}},
+			[]ViaEntry{{"HTTP/1.1", "foo", "comment (with nesting)"}},
+		},
+		{
+			http.Header{"Via": []string{`1.1 foo (comment with \) quoting)`}},
+			[]ViaEntry{{"HTTP/1.1", "foo", "comment with ) quoting"}},
+		},
+		{
+			http.Header{"Via": []string{
+				`1.1 foo (comment (with \) quoting) and nesting)`,
+			}},
+			[]ViaEntry{
+				{"HTTP/1.1", "foo", "comment (with ) quoting) and nesting"},
+			},
+		},
+		{
+			http.Header{"Via": []string{`1.1 foo (\strange quoting)`}},
+			[]ViaEntry{{"HTTP/1.1", "foo", "strange quoting"}},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Via": []string{"1.0"}},
+			nil,
+		},
+		{
 			http.Header{"Via": []string{"1.0, 1.1 foo, 1.2, 1.3 bar"}},
 			[]ViaEntry{{"HTTP/1.1", "foo", ""}, {"HTTP/1.3", "bar", ""}},
-		},
-		{
-			http.Header{"Via": []string{"", ",FSTR/3 foo (comment (with) nesting)"}},
-			[]ViaEntry{{"FSTR/3", "foo", "comment (with) nesting"}},
-		},
-		{
-			http.Header{"Via": []string{`1.1 foo  (with \) quoting (and nesting))`}},
-			[]ViaEntry{{"HTTP/1.1", "foo", "with ) quoting (and nesting)"}},
 		},
 		{
 			http.Header{"Via": []string{
@@ -195,13 +233,9 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": []string{
-				"1.1 foo (unterminated (with nesting",
-				"1.1 bar",
-			}},
+			http.Header{"Via": []string{"1.1 foo (unterminated (with nesting)",}},
 			[]ViaEntry{
-				{"HTTP/1.1", "foo", "unterminated (with nesting"},
-				{"HTTP/1.1", "bar", ""},
+				{"HTTP/1.1", "foo", "unterminated (with nesting)"},
 			},
 		},
 		{
@@ -244,29 +278,19 @@ func TestWarning(t *testing.T) {
 		header http.Header
 		result []WarningEntry
 	}{
-		{
-			http.Header{"Warning": []string{`299`}},
-			nil,
-		},
-		{
-			http.Header{"Warning": []string{`299 -`}},
-			[]WarningEntry{{299, "-", "", time.Time{}}},
-		},
-		{
-			http.Header{"Warning": []string{`299 - bad`}},
-			[]WarningEntry{{299, "-", "", time.Time{}}},
-		},
-		{
-			http.Header{"Warning": []string{`299  - "bad"`}},
-			nil,
-		},
+		// Valid headers.
 		{
 			http.Header{"Warning": []string{`299 - "good"`}},
 			[]WarningEntry{{299, "-", "good", time.Time{}}},
 		},
 		{
-			http.Header{"Warning": []string{`299  bad, 299 - "good"`}},
-			[]WarningEntry{{299, "-", "good", time.Time{}}},
+			http.Header{"Warning": []string{`299 example.net:80 "good"`}},
+			[]WarningEntry{{299, "example.net:80", "good", time.Time{}}},
+		},
+		{
+			// See RFC 6874.
+			http.Header{"Warning": []string{`299 [fe80::a%25en1]:80 "good"`}},
+			[]WarningEntry{{299, "[fe80::a%25en1]:80", "good", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`199 - "good", 299 - "better"`}},
@@ -284,10 +308,10 @@ func TestWarning(t *testing.T) {
 		},
 		{
 			http.Header{"Warning": []string{
-				`299 example.net:80 "good" "Sat, 06 Jul 2019 05:45:48 GMT"`,
+				`299 - "good" "Sat, 06 Jul 2019 05:45:48 GMT"`,
 			}},
 			[]WarningEntry{{
-				299, "example.net:80", "good",
+				299, "-", "good",
 				time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
 			}},
 		},
@@ -307,8 +331,82 @@ func TestWarning(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Warning": []string{`299 example.net:80 "good" "bad date"`}},
-			[]WarningEntry{{299, "example.net:80", "good", time.Time{}}},
+			http.Header{"Warning": []string{
+				`199 - "good" "Sat, 06 Jul 2019 05:45:48 GMT"\t,299 - "better"`,
+			}},
+			[]WarningEntry{
+				{
+					199, "-", "good",
+					time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
+				},
+				{
+					299, "-", "better",
+					time.Time{},
+				},
+			},
+		},
+		{
+			http.Header{"Warning": []string{`299 - "with \"escaped\" quotes"`}},
+			[]WarningEntry{{299, "-", `with "escaped" quotes`, time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{`299 - "\"escaped\" quotes"`}},
+			[]WarningEntry{{299, "-", `"escaped" quotes`, time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{`299 - "with \"escaped\""`}},
+			[]WarningEntry{{299, "-", `with "escaped"`, time.Time{}}},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Warning": []string{"299"}},
+			nil,
+		},
+		{
+			http.Header{"Warning": []string{"299 -"}},
+			[]WarningEntry{{299, "-", "", time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{"299 - unquoted"}},
+			[]WarningEntry{{299, "-", "", time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{`299  - "two spaces"`}},
+			nil,
+		},
+		{
+			http.Header{"Warning": []string{`?????,299 - "good"`}},
+			[]WarningEntry{{299, "-", "good", time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{`299  bad, 299 - "good"`}},
+			[]WarningEntry{{299, "-", "good", time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{`299 - "good" "bad date"`}},
+			[]WarningEntry{{299, "-", "good", time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{`299 - "unterminated`}},
+			[]WarningEntry{{299, "-", "unterminated", time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{`299 - "unterminated\"`}},
+			[]WarningEntry{{299, "-", `unterminated"`, time.Time{}}},
+		},
+		{
+			http.Header{"Warning": []string{
+				// This is invalid because warning-date is not a quoted-string;
+				// still, we parse it as such for our convenience.
+				`299 - "good" "Sat, 06 Jul 2019 \05:45:48 GMT"`,
+			}},
+			[]WarningEntry{{
+				299, "-", "good",
+				time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
+			}},
 		},
 	}
 	for _, test := range tests {
