@@ -2,6 +2,7 @@ package httpheader
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"testing"
 )
@@ -144,4 +145,16 @@ func TestVia(t *testing.T) {
 			checkParse(t, test.header, test.result, Via(test.header))
 		})
 	}
+}
+
+func TestViaRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetVia, Via, func(r *rand.Rand) interface{} {
+		return mkSlice(r, func(r *rand.Rand) interface{} {
+			return ViaElem{
+				ReceivedProto: mkToken(r).(string)+"/"+mkToken(r).(string),
+				ReceivedBy:    mkToken(r).(string),
+				Comment:       mkString(r).(string),
+			}
+		})
+	})
 }
