@@ -3,6 +3,7 @@ package httpheader
 import (
 	"fmt"
 	"net/http"
+	"testing"
 )
 
 func ExamplePrefer() {
@@ -29,4 +30,119 @@ func ExampleAddPrefer() {
 			Params: map[string]string{"quux": "xyzzy"},
 		},
 	})
+}
+
+func TestPrefer(t *testing.T) {
+	tests := []struct {
+		header http.Header
+		result map[string]Pref
+	}{
+		// Valid headers.
+		{
+			http.Header{},
+			nil,
+		},
+		{
+			http.Header{"Prefer": {"respond-async"}},
+			map[string]Pref{"respond-async": {"", nil}},
+		},
+		{
+			http.Header{"Prefer": {"Respond-Async"}},
+			map[string]Pref{"respond-async": {"", nil}},
+		},
+		{
+			http.Header{"Prefer": {"wait=10"}},
+			map[string]Pref{"wait": {"10", nil}},
+		},
+		{
+			http.Header{"Prefer": {`wait="10"`}},
+			map[string]Pref{"wait": {"10", nil}},
+		},
+		{
+			http.Header{"Prefer": {"respond-async, wait=10"}},
+			map[string]Pref{"respond-async": {"", nil}, "wait": {"10", nil}},
+		},
+		{
+			http.Header{"Prefer": {
+				"respond-async, wait=10",
+				"handling=lenient",
+			}},
+			map[string]Pref{
+				"respond-async": {"", nil},
+				"wait":          {"10", nil},
+				"handling":      {"lenient", nil},
+			},
+		},
+		{
+			http.Header{"Prefer": {"foo;baz"}},
+			map[string]Pref{"foo": {"", map[string]string{"baz": ""}}},
+		},
+		{
+			http.Header{"Prefer": {"foo; baz"}},
+			map[string]Pref{"foo": {"", map[string]string{"baz": ""}}},
+		},
+		{
+			http.Header{"Prefer": {"foo ;\t\t;; ; BAZ ;,"}},
+			map[string]Pref{"foo": {"", map[string]string{"baz": ""}}},
+		},
+		{
+			http.Header{"Prefer": {"foo=Bar; baz"}},
+			map[string]Pref{"foo": {"Bar", map[string]string{"baz": ""}}},
+		},
+		{
+			http.Header{"Prefer": {`foo="quoted \"bar\""; baz`}},
+			map[string]Pref{"foo": {`quoted "bar"`, map[string]string{"baz": ""}}},
+		},
+		{
+			http.Header{"Prefer": {`foo=bar;baz=Qux`}},
+			map[string]Pref{"foo": {"bar", map[string]string{"baz": "Qux"}}},
+		},
+		{
+			http.Header{"Prefer": {`foo=bar;baz="quoted \"qux\"" ;xyzzy`}},
+			map[string]Pref{
+				"foo": {"bar", map[string]string{
+					"baz":   `quoted "qux"`,
+					"xyzzy": "",
+				}},
+			},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Prefer": {"???"}},
+			map[string]Pref{"???": {"", nil}},
+		},
+		{
+			// Whitespace around '=' is not allowed by RFC 7240 errata 4439.
+			http.Header{"Prefer": {"foo = bar"}},
+			map[string]Pref{"foo": {"", nil}},
+		},
+		{
+			http.Header{"Prefer": {"foo = bar, baz = qux"}},
+			map[string]Pref{"foo": {"", nil}, "baz": {"", nil}},
+		},
+		{
+			http.Header{"Prefer": {"foo=???"}},
+			map[string]Pref{"foo": {"???", nil}},
+		},
+		{
+			http.Header{"Prefer": {"foo bar; baz, qux"}},
+			map[string]Pref{"foo": {"", nil}, "qux": {"", nil}},
+		},
+		{
+			http.Header{"Prefer": {";;;, foo=yes"}},
+			map[string]Pref{"": {"", nil}, "foo": {"yes", nil}},
+		},
+		{
+			http.Header{"Prefer": {"foo=bar=baz"}},
+			map[string]Pref{"foo": {"bar", nil}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			checkParse(t, test.header, test.result, Prefer(test.header))
+		})
+	}
 }
