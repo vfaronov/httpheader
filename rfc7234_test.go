@@ -17,8 +17,8 @@ func ExampleWarning() {
 func ExampleAddWarning() {
 	header := http.Header{}
 	AddWarning(header, WarningElem{
-		Code:  299,
-		Text:  "something is fishy",
+		Code: 299,
+		Text: "something is fishy",
 	})
 }
 

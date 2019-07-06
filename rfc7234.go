@@ -2,8 +2,8 @@ package httpheader
 
 import (
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -11,7 +11,7 @@ import (
 // (RFC 7234 Section 5.5).
 type WarningElem struct {
 	Code  int
-	Agent string    // defaults to "-" on output
+	Agent string // defaults to "-" on output
 	Text  string
 	Date  time.Time // zero if missing
 }

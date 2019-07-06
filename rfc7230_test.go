@@ -151,7 +151,7 @@ func TestViaRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetVia, Via, func(r *rand.Rand) interface{} {
 		return mkSlice(r, func(r *rand.Rand) interface{} {
 			return ViaElem{
-				ReceivedProto: mkToken(r).(string)+"/"+mkToken(r).(string),
+				ReceivedProto: mkToken(r).(string) + "/" + mkToken(r).(string),
 				ReceivedBy:    mkToken(r).(string),
 				Comment:       mkString(r).(string),
 			}
