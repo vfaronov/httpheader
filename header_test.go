@@ -17,8 +17,6 @@ func ExampleAllow() {
 func ExampleSetAllow() {
 	header := http.Header{}
 	SetAllow(header, []string{"GET", "HEAD", "OPTIONS"})
-	fmt.Printf("%q", header)
-	// Output: map["Allow":["GET, HEAD, OPTIONS"]]
 }
 
 func TestAllow(t *testing.T) {
@@ -128,10 +126,8 @@ func ExampleAddVia() {
 	header := http.Header{"Via": []string{"1.0 foo"}}
 	AddVia(header, ViaElem{
 		ReceivedProto: "HTTP/1.1",
-		ReceivedBy:    "bar",
+		ReceivedBy:    "my-service",
 	})
-	fmt.Printf("%q", header)
-	// Output: map["Via":["1.0 foo" "1.1 bar"]]
 }
 
 func TestVia(t *testing.T) {
@@ -270,8 +266,6 @@ func ExampleAddWarning() {
 		Agent: "-",
 		Text:  "something is fishy",
 	})
-	fmt.Printf("%q", header)
-	// Output: map["Warning":["299 - \"something is fishy\""]]
 }
 
 func TestWarning(t *testing.T) {
@@ -413,6 +407,7 @@ func TestWarning(t *testing.T) {
 }
 
 func checkParse(t *testing.T, header http.Header, expected, actual interface{}) {
+	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("header: %#v\nexpected: %#v\nactual:   %#v",
 			header, expected, actual)

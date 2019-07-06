@@ -134,7 +134,7 @@ func Warning(h http.Header) []WarningElem {
 		if peek(v) == '"' {
 			nextQuote := strings.IndexByte(v[1:], '"')
 			if nextQuote > 0 {
-				elem.Date, _ = http.ParseTime(v[1:nextQuote+1])
+				elem.Date, _ = http.ParseTime(v[1 : nextQuote+1])
 				v = v[nextQuote+1:]
 			}
 		}
