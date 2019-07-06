@@ -36,10 +36,6 @@ func TestAllow(t *testing.T) {
 			nil,
 		},
 		{
-			http.Header{"Allow": []string{}},
-			nil,
-		},
-		{
 			http.Header{"Allow": []string{""}},
 			[]string{},
 		},
@@ -94,15 +90,15 @@ func TestAllow(t *testing.T) {
 		// Precise outputs on them are not a guaranteed part of the API.
 		// They may change as convenient for the parsing code.
 		{
-			http.Header{"Allow": []string{"???"}},
+			http.Header{"Allow": []string{";;;"}},
 			[]string{},
 		},
 		{
-			http.Header{"Allow": []string{"???,GET"}},
+			http.Header{"Allow": []string{";;;,GET"}},
 			[]string{"GET"},
 		},
 		{
-			http.Header{"Allow": []string{"GET???whatever, HEAD"}},
+			http.Header{"Allow": []string{"GET;;;whatever, HEAD"}},
 			[]string{"GET", "HEAD"},
 		},
 	}
@@ -216,11 +212,16 @@ func TestVia(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Via": []string{"1.0"}},
-			nil,
+			[]ViaEntry{{"HTTP/1.0", "", ""}},
 		},
 		{
 			http.Header{"Via": []string{"1.0, 1.1 foo, 1.2, 1.3 bar"}},
-			[]ViaEntry{{"HTTP/1.1", "foo", ""}, {"HTTP/1.3", "bar", ""}},
+			[]ViaEntry{
+				{"HTTP/1.0", "", ""},
+				{"HTTP/1.1", "foo", ""},
+				{"HTTP/1.2", "", ""},
+				{"HTTP/1.3", "bar", ""},
+			},
 		},
 		{
 			http.Header{"Via": []string{
@@ -363,7 +364,7 @@ func TestWarning(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Warning": []string{"299"}},
-			nil,
+			[]WarningEntry{{299, "", "", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{"299 -"}},
@@ -375,15 +376,21 @@ func TestWarning(t *testing.T) {
 		},
 		{
 			http.Header{"Warning": []string{`299  - "two spaces"`}},
-			nil,
+			[]WarningEntry{{299, "-", "two spaces", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": []string{`?????,299 - "good"`}},
-			[]WarningEntry{{299, "-", "good", time.Time{}}},
+			[]WarningEntry{
+				{0, "", "", time.Time{}},
+				{299, "-", "good", time.Time{}},
+			},
 		},
 		{
 			http.Header{"Warning": []string{`299  bad, 299 - "good"`}},
-			[]WarningEntry{{299, "-", "good", time.Time{}}},
+			[]WarningEntry{
+				{299, "bad", "", time.Time{}},
+				{299, "-", "good", time.Time{}},
+			},
 		},
 		{
 			http.Header{"Warning": []string{`299 - "good" "bad date"`}},
@@ -396,17 +403,6 @@ func TestWarning(t *testing.T) {
 		{
 			http.Header{"Warning": []string{`299 - "unterminated\"`}},
 			[]WarningEntry{{299, "-", `unterminated"`, time.Time{}}},
-		},
-		{
-			http.Header{"Warning": []string{
-				// This is invalid because warning-date is not a quoted-string;
-				// still, we parse it as such for our convenience.
-				`299 - "good" "Sat, 06 Jul 2019 \05:45:48 GMT"`,
-			}},
-			[]WarningEntry{{
-				299, "-", "good",
-				time.Date(2019, time.July, 6, 5, 45, 48, 0, time.UTC),
-			}},
 		},
 	}
 	for _, test := range tests {

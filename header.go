@@ -14,13 +14,14 @@ import (
 // Allow returns a non-nil slice of length 0.
 func Allow(h http.Header) []string {
 	var methods []string
-	for v, vs := toNextElem("", h["Allow"]); vs != nil; v, vs = toNextElem(v, vs) {
-		var tok string
-		if tok, v = token(v); tok != "" {
-			methods = append(methods, tok)
+	for v, vs := iterElems("", h["Allow"]); vs != nil; v, vs = iterElems(v, vs) {
+		var method string
+		method, v = consumeItem(v)
+		if method != "" {
+			methods = append(methods, method)
 		}
 	}
-	if methods == nil && len(h["Allow"]) > 0 {
+	if methods == nil && h["Allow"] != nil {
 		methods = make([]string, 0)
 	}
 	return methods
@@ -36,10 +37,11 @@ func SetAllow(h http.Header, methods []string) {
 // A wildcard (Vary: *) is returned as a slice of 1 element.
 func Vary(h http.Header) []string {
 	var names []string
-	for v, vs := toNextElem("", h["Vary"]); vs != nil; v, vs = toNextElem(v, vs) {
-		var tok string
-		if tok, v = token(v); tok != "" {
-			names = append(names, http.CanonicalHeaderKey(tok))
+	for v, vs := iterElems("", h["Vary"]); vs != nil; v, vs = iterElems(v, vs) {
+		var name string
+		name, v = consumeItem(v)
+		if name != "" {
+			names = append(names, http.CanonicalHeaderKey(name))
 		}
 	}
 	return names
@@ -57,26 +59,22 @@ func AddVary(h http.Header, names []string) {
 
 // Via parses the Via header from h (RFC 7230 Section 5.7.1).
 func Via(h http.Header) []ViaEntry {
-	var entries []ViaEntry
-	for v, vs := toNextElem("", h["Via"]); vs != nil; v, vs = toNextElem(v, vs) {
-		var entry ViaEntry
-		entry.ReceivedProto, v = chomp(v)
-		if entry.ReceivedProto == "" {
-			continue
+	var elems []ViaEntry
+	for v, vs := iterElems("", h["Via"]); vs != nil; v, vs = iterElems(v, vs) {
+		var elem ViaEntry
+		elem.ReceivedProto, v = consumeItem(v)
+		if strings.IndexByte(elem.ReceivedProto, '/') == -1 {
+			elem.ReceivedProto = "HTTP/" + elem.ReceivedProto
 		}
-		if !strings.ContainsRune(entry.ReceivedProto, '/') {
-			entry.ReceivedProto = "HTTP/" + entry.ReceivedProto
-		}
-		entry.ReceivedBy, v = chomp(v)
-		if entry.ReceivedBy == "" {
-			continue
-		}
+		v = skipWS(v)
+		elem.ReceivedBy, v = consumeItem(v)
+		v = skipWS(v)
 		if peek(v) == '(' {
-			entry.Comment, v = comment(v)
+			elem.Comment, v = consumeComment(v)
 		}
-		entries = append(entries, entry)
+		elems = append(elems, elem)
 	}
-	return entries
+	return elems
 }
 
 // SetVia replaces the Via header in h. See also AddVia.
@@ -115,32 +113,27 @@ type ViaEntry struct {
 
 // Warning parses the Warning header from h (RFC 7234 Section 5.5).
 func Warning(h http.Header) []WarningEntry {
-	var entries []WarningEntry
-	for v, vs := toNextElem("", h["Warning"]); vs != nil; v, vs = toNextElem(v, vs) {
-		var entry WarningEntry
-		entry.Code, v = number(v)
-		if entry.Code == -1 {
-			continue
+	var elems []WarningEntry
+	for v, vs := iterElems("", h["Warning"]); vs != nil; v, vs = iterElems(v, vs) {
+		var elem WarningEntry
+		var codeStr string
+		codeStr, v = consumeItem(v)
+		elem.Code, _ = strconv.Atoi(codeStr)
+		v = skipWS(v)
+		elem.Agent, v = consumeItem(v)
+		v = skipWS(v)
+		elem.Text, v = consumeQuoted(v)
+		v = skipWS(v)
+		if peek(v) == '"' {
+			nextQuote := strings.IndexByte(v[1:], '"')
+			if nextQuote > 0 {
+				elem.Date, _ = http.ParseTime(v[1:nextQuote+1])
+				v = v[nextQuote+1:]
+			}
 		}
-		var ok bool
-		v, ok = consume(v, ' ')
-		if !ok {
-			continue
-		}
-		entry.Agent, v = chomp(v)
-		if entry.Agent == "" {
-			continue
-		}
-		entry.Text, v = quoted(v)
-		v, ok = consume(v, ' ')
-		if ok {
-			var dateStr string
-			dateStr, v = quoted(v)
-			entry.Date, _ = http.ParseTime(dateStr)
-		}
-		entries = append(entries, entry)
+		elems = append(elems, elem)
 	}
-	return entries
+	return elems
 }
 
 // A WarningEntry represents one element of the Warning header

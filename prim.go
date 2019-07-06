@@ -4,20 +4,6 @@ import (
 	"strings"
 )
 
-var (
-	isTchar [256]bool
-)
-
-func init() {
-	tchars := "!#$%&'*+-.^_`|~" +
-		"0123456789" +
-		"abcdefghijklmnopqrstuvwxyz" +
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	for _, c := range tchars {
-		isTchar[c] = true
-	}
-}
-
 func peek(v string) byte {
 	if v == "" {
 		return 0
@@ -25,42 +11,42 @@ func peek(v string) byte {
 	return v[0]
 }
 
-func consume(v string, ch byte) (string, bool) {
-	if peek(v) != ch {
-		return v, false
-	}
-	return v[1:], true
-}
-
-func toNextElem(v string, vs []string) (string, []string) {
-	// Skip over any possible unparsed junk at the front.
-	for v != "" && v[0] != ',' {
-		v = v[1:]
-	}
+// iterElems iterates over elements in comma-separated header fields
+// (RFC 7230 Section 7) spanning multiple field-values (Section 3.2.2).
+// iterElems moves to the beginning of the next non-empty element in v.
+// If there are no more such elements in v, takes the next v from vs.
+// Returns the new values for v and vs, with vs = nil meaning end of iteration.
+func iterElems(v string, vs []string) (newv string, newvs []string) {
+	orig := true // true means we are still at the same element we started at
 	for {
-		// Skip to the next field value if the current one is over.
-		if v == "" {
+		for v == "" {
 			if len(vs) == 0 {
 				return "", nil
 			}
 			v, vs = vs[0], vs[1:]
-			continue
+			orig = false
 		}
-		// Skip over any empty elements.
-		// RFC 7230 Section 7: "Empty elements do not contribute
-		// to the count of elements present."
-		if v[0] == ' ' || v[0] == '\t' || v[0] == ',' {
-			v = v[1:]
-			continue
+		switch v[0] {
+		case ',':
+			orig = false
+		case ' ', '\t':
+			// Whitespace between elements.
+		default:
+			if !orig {
+				return v, vs
+			}
 		}
-		return v, vs
+		v = v[1:]
 	}
 }
 
-func chomp(v string) (item, rest string) {
+// consumeItem returns the item from the beginning of v, and the rest of v.
+// An item is a run of text up to whitespace, comma, semicolon, or equals sign.
+func consumeItem(v string) (item, newv string) {
 	for i := 0; i < len(v); i++ {
-		if v[i] == ' ' || v[i] == '\t' || v[i] == ',' {
-			return v[:i], skipWS(v[i:])
+		switch v[i] {
+		case ' ', '\t', ',', ';', '=':
+			return v[:i], v[i:]
 		}
 	}
 	return v, ""
@@ -73,37 +59,15 @@ func skipWS(v string) string {
 	return v
 }
 
-func token(v string) (tok, rest string) {
-	for i := 0; i < len(v); i++ {
-		if !isTchar[v[i]] {
-			return v[:i], v[i:]
-		}
-	}
-	return v, ""
+func consumeQuoted(v string) (text, newv string) {
+	return consumeDelimited(v, '"', '"')
 }
 
-func number(v string) (n int, rest string) {
-	i := 0
-	for ; i < len(v); i++ {
-		if v[i] >= '0' && v[i] <= '9' {
-			n = (n * 10) + int(v[i] - '0')
-		} else {
-			break
-		}
-	}
-	rest = v[i:]
-	return
+func consumeComment(v string) (text, newv string) {
+	return consumeDelimited(v, '(', ')')
 }
 
-func quoted(v string) (text, rest string) {
-	return delimited(v, '"', '"')
-}
-
-func comment(v string) (text, rest string) {
-	return delimited(v, '(', ')')
-}
-
-func delimited(v string, opener, closer byte) (text, rest string) {
+func consumeDelimited(v string, opener, closer byte) (text, newv string) {
 	if peek(v) != opener {
 		return "", v
 	}
