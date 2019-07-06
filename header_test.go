@@ -263,7 +263,6 @@ func ExampleAddWarning() {
 	header := http.Header{}
 	AddWarning(header, WarningElem{
 		Code:  299,
-		Agent: "-",
 		Text:  "something is fishy",
 	})
 }

@@ -147,7 +147,7 @@ func Warning(h http.Header) []WarningElem {
 // (RFC 7234 Section 5.5).
 type WarningElem struct {
 	Code  int
-	Agent string
+	Agent string    // defaults to "-" on output
 	Text  string
 	Date  time.Time // zero if missing
 }
@@ -173,6 +173,9 @@ func buildWarning(elems []WarningElem) string {
 		}
 		b.WriteString(strconv.Itoa(elem.Code))
 		b.WriteString(" ")
+		if elem.Agent == "" {
+			elem.Agent = "-"
+		}
 		b.WriteString(elem.Agent)
 		b.WriteString(" ")
 		writeQuoted(b, elem.Text)
