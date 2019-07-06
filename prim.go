@@ -135,7 +135,7 @@ func writeComment(b *strings.Builder, s string) {
 func writeDelimited(b *strings.Builder, s string, opener, closer byte) {
 	b.WriteByte(opener)
 	for i := 0; i < len(s); i++ {
-		if s[i] == opener || s[i] == closer {
+		if s[i] == opener || s[i] == closer || s[i] == '\\' {
 			b.WriteByte('\\')
 		}
 		b.WriteByte(s[i])
