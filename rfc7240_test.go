@@ -200,12 +200,10 @@ func TestSetPrefer(t *testing.T) {
 func TestPreferRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetPrefer, Prefer, func(r *rand.Rand) interface{} {
 		return mkMap(r, mkLowerToken, func(r *rand.Rand) interface{} {
-			var pref Pref
-			if r.Intn(2) == 0 {
-				pref.Value = mkString(r).(string)
+			return Pref{
+				Value:  mkString(r).(string),
+				Params: mkMap(r, mkLowerToken, mkString).(map[string]string),
 			}
-			pref.Params = mkMap(r, mkLowerToken, mkString).(map[string]string)
-			return pref
 		})
 	})
 }

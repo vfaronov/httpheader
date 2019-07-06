@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func checkParse(t *testing.T, header http.Header, expected, actual interface{}) {
@@ -56,13 +57,18 @@ func checkRoundTrip(
 }
 
 func mkString(r *rand.Rand) interface{} {
-	b := make([]byte, 1+r.Intn(5))
+	b := make([]byte, r.Intn(5))
 	r.Read(b)
 	return string(b)
 }
 
 func mkToken(r *rand.Rand) interface{} {
-	const chars = "-!#$%&'*+.^_`|~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	const (
+		punctuation = "-!#$%&'*+.^_`|~"
+		digits      = "0123456789"
+		letters     = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		chars       = punctuation + digits + letters + letters + letters
+	)
 	b := make([]byte, 1+r.Intn(5))
 	for i := range b {
 		b[i] = chars[r.Intn(len(chars))]
@@ -80,10 +86,25 @@ func mkHeaderName(r *rand.Rand) interface{} {
 	return http.CanonicalHeaderKey(token)
 }
 
+func mkDate(r *rand.Rand) interface{} {
+	return time.Date(2000+r.Intn(30), time.Month(1+r.Intn(12)), 1+r.Intn(28),
+		r.Intn(24), r.Intn(60), r.Intn(60), 0, time.UTC)
+}
+
+func mkMaybeDate(r *rand.Rand) interface{} {
+	if r.Intn(2) == 0 {
+		return time.Time{}
+	}
+	return mkDate(r)
+}
+
 func mkSlice(r *rand.Rand, value func(*rand.Rand) interface{}) interface{} {
-	nitems := 1 + r.Intn(3)
-	valueT := reflect.TypeOf(value(r))
-	sliceV := reflect.MakeSlice(reflect.SliceOf(valueT), nitems, nitems)
+	nitems := r.Intn(4)
+	sliceT := reflect.SliceOf(reflect.TypeOf(value(r)))
+	if nitems == 0 {
+		return reflect.Zero(sliceT).Interface()
+	}
+	sliceV := reflect.MakeSlice(sliceT, nitems, nitems)
 	for i := 0; i < nitems; i++ {
 		valueV := reflect.ValueOf(value(r))
 		sliceV.Index(i).Set(valueV)
@@ -92,10 +113,14 @@ func mkSlice(r *rand.Rand, value func(*rand.Rand) interface{}) interface{} {
 }
 
 func mkMap(r *rand.Rand, key, value func(*rand.Rand) interface{}) interface{} {
-	nkeys := 1 + r.Intn(3)
+	nkeys := r.Intn(4)
 	keyT := reflect.TypeOf(key(r))
 	valueT := reflect.TypeOf(value(r))
-	mapV := reflect.MakeMap(reflect.MapOf(keyT, valueT))
+	mapT := reflect.MapOf(keyT, valueT)
+	if nkeys == 0 {
+		return reflect.Zero(mapT).Interface()
+	}
+	mapV := reflect.MakeMap(mapT)
 	for i := 0; i < nkeys; i++ {
 		keyV := reflect.ValueOf(key(r))
 		valueV := reflect.ValueOf(value(r))

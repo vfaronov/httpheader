@@ -163,17 +163,12 @@ func TestWarning(t *testing.T) {
 func TestWarningRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetWarning, Warning, func(r *rand.Rand) interface{} {
 		return mkSlice(r, func(r *rand.Rand) interface{} {
-			elem := WarningElem{
+			return WarningElem{
 				Code:  100 + r.Intn(900),
 				Agent: mkToken(r).(string),
+				Text:  mkString(r).(string),
+				Date:  mkMaybeDate(r).(time.Time),
 			}
-			if r.Intn(2) == 0 {
-				elem.Text = mkString(r).(string)
-			}
-			if r.Intn(2) == 0 {
-				elem.Date = time.Date(2019, time.July, 6, 18, 9, 11, 0, time.UTC)
-			}
-			return elem
 		})
 	})
 }
