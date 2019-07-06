@@ -57,8 +57,14 @@ func checkRoundTrip(
 }
 
 func mkString(r *rand.Rand) interface{} {
+	// Any characters allowed inside a quoted-string or a comment.
 	b := make([]byte, r.Intn(5))
 	r.Read(b)
+	for i := range b {
+		if b[i] <= 0x20 || b[i] == 0x7E {
+			b[i] = '.'
+		}
+	}
 	return string(b)
 }
 

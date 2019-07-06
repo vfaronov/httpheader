@@ -34,8 +34,8 @@ func Via(h http.Header) []ViaElem {
 
 // SetVia replaces the Via header in h.
 // In each of elems, ReceivedProto and ReceivedBy must be valid
-// as per RFC 7230 Section 5.7.1; Comment may contain any text,
-// which will be escaped automatically.
+// as per RFC 7230 Section 5.7.1;
+// Comment may contain any bytes except control characters.
 // See also AddVia.
 func SetVia(h http.Header, elems []ViaElem) {
 	h.Set("Via", buildVia(elems))

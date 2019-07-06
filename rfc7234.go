@@ -43,7 +43,7 @@ func Warning(h http.Header) []WarningElem {
 
 // SetWarning replaces the Warning header in h.
 // In each of elems, Code and Agent must be valid as per RFC 7234 Section 5.5;
-// Text may contain any text, which will be escaped automatically.
+// Text may contain any bytes except control characters.
 // See also AddWarning.
 func SetWarning(h http.Header, elems []WarningElem) {
 	h.Set("Warning", buildWarning(elems))
