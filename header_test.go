@@ -234,7 +234,7 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": []string{"1.1 foo (unterminated (with nesting)",}},
+			http.Header{"Via": []string{"1.1 foo (unterminated (with nesting)"}},
 			[]ViaElem{
 				{"HTTP/1.1", "foo", "unterminated (with nesting)"},
 			},
@@ -417,4 +417,30 @@ func checkParse(t *testing.T, header http.Header, expected, actual interface{}) 
 		t.Errorf("header: %#v\nexpected: %#v\nactual:   %#v",
 			header, expected, actual)
 	}
+}
+
+func ExamplePrefer() {
+	header := http.Header{"Prefer": []string{
+		"wait=10, respond-async",
+		`Foo; Bar="quux, xyzzy"; Baz`,
+	}}
+	prefer := Prefer(header)
+	fmt.Printf("%q\n", prefer["wait"])
+	fmt.Printf("%q\n", prefer["respond-async"])
+	fmt.Printf("%q\n", prefer["foo"])
+	// Output: {"10" map[]}
+	// {"" map[]}
+	// {"" map["bar":"quux, xyzzy" "baz":""]}
+}
+
+func ExampleAddPrefer() {
+	header := http.Header{}
+	SetPrefer(header, map[string]Pref{
+		"wait":          {"10", nil},
+		"respond-async": {},
+		"foo": {
+			Value:  "bar, baz",
+			Params: map[string]string{"quux": "xyzzy"},
+		},
+	})
 }

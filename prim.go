@@ -1,8 +1,11 @@
 package httpheader
 
 import (
+	"regexp"
 	"strings"
 )
+
+var tokenExp = regexp.MustCompile("^[-!#$%&'*+.^_`|~0-9a-zA-Z]+$")
 
 func peek(v string) byte {
 	if v == "" {
@@ -121,6 +124,14 @@ buffered:
 	return string(buf), "" // unterminated string
 }
 
+func writeQuoted(b *strings.Builder, s string) {
+	writeDelimited(b, s, '"', '"')
+}
+
+func writeComment(b *strings.Builder, s string) {
+	writeDelimited(b, s, '(', ')')
+}
+
 func writeDelimited(b *strings.Builder, s string, opener, closer byte) {
 	b.WriteByte(opener)
 	for i := 0; i < len(s); i++ {
@@ -130,4 +141,19 @@ func writeDelimited(b *strings.Builder, s string, opener, closer byte) {
 		b.WriteByte(s[i])
 	}
 	b.WriteByte(closer)
+}
+
+func consumeItemOrQuoted(v string) (text, newv string) {
+	if peek(v) == '"' {
+		return consumeQuoted(v)
+	}
+	return consumeItem(v)
+}
+
+func writeTokenOrQuoted(b *strings.Builder, s string) {
+	if tokenExp.MatchString(s) {
+		b.WriteString(s)
+	} else {
+		writeQuoted(b, s)
+	}
 }

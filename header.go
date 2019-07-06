@@ -105,7 +105,7 @@ func buildVia(elems []ViaElem) string {
 		b.WriteString(elem.ReceivedBy)
 		if elem.Comment != "" {
 			b.WriteString(" ")
-			writeDelimited(b, elem.Comment, '(', ')')
+			writeComment(b, elem.Comment)
 		}
 	}
 	return b.String()
@@ -175,7 +175,7 @@ func buildWarning(elems []WarningElem) string {
 		b.WriteString(" ")
 		b.WriteString(elem.Agent)
 		b.WriteString(" ")
-		writeDelimited(b, elem.Text, '"', '"')
+		writeQuoted(b, elem.Text)
 		if !elem.Date.IsZero() {
 			b.WriteString(` "`)
 			b.WriteString(elem.Date.Format(http.TimeFormat))
@@ -183,4 +183,92 @@ func buildWarning(elems []WarningElem) string {
 		}
 	}
 	return b.String()
+}
+
+// Prefer parses the Prefer header from h (RFC 7240 with errata),
+// returning a map where keys are preference names, canonicalized to lowercase.
+func Prefer(h http.Header) map[string]Pref {
+	var r map[string]Pref
+	for v, vs := iterElems("", h["Prefer"]); vs != nil; v, vs = iterElems(v, vs) {
+		var name string
+		var pref Pref
+		name, pref.Value, v = consumePrefParam(v)
+		for {
+			v = skipWS(v)
+			if peek(v) != ';' {
+				break
+			}
+			v = skipWS(v[1:])
+			switch peek(v) {
+			case ';', ',':
+				// This is an empty parameter.
+			default:
+				var paramName, paramValue string
+				paramName, paramValue, v = consumePrefParam(v)
+				if pref.Params == nil {
+					pref.Params = make(map[string]string)
+				}
+				pref.Params[paramName] = paramValue
+			}
+		}
+		if r == nil {
+			r = make(map[string]Pref)
+		}
+		r[name] = pref
+	}
+	return r
+}
+
+func consumePrefParam(v string) (name, value, newv string) {
+	// RFC 7240 errata 4439 'preference-parameter':
+	// `name` or `name=value` or `name="quoted value"` (no WS around `=`)
+	name, v = consumeItem(v)
+	name = strings.ToLower(name)
+	if peek(v) == '=' {
+		value, v = consumeItemOrQuoted(v[1:])
+	}
+	return name, value, v
+}
+
+// SetPrefer replaces the Prefer header in h (RFC 7240 with errata).
+// All keys must be valid tokens (RFC 7230 Section 3.2.6);
+// values may contain any text, which will be quoted and escaped as necessary.
+// See also AddPrefer.
+func SetPrefer(h http.Header, prefs map[string]Pref) {
+	h.Set("Prefer", buildPrefer(prefs))
+}
+
+// AddPrefer is like SetPrefer but appends instead of replacing.
+func AddPrefer(h http.Header, prefs map[string]Pref) {
+	h.Add("Prefer", buildPrefer(prefs))
+}
+
+func buildPrefer(prefs map[string]Pref) string {
+	b := &strings.Builder{}
+	first := true
+	for name, pref := range prefs {
+		if !first {
+			b.WriteString(", ")
+		}
+		first = false
+		b.WriteString(name)
+		if pref.Value != "" {
+			b.WriteString("=")
+			writeTokenOrQuoted(b, pref.Value)
+		}
+		for paramName, paramValue := range pref.Params {
+			b.WriteString(paramName)
+			if paramValue != "" {
+				b.WriteString("=")
+				writeTokenOrQuoted(b, paramValue)
+			}
+		}
+	}
+	return b.String()
+}
+
+// A Pref contains a preference's value and any associated parameters.
+type Pref struct {
+	Value  string            // must be a valid token
+	Params map[string]string // keys are canonicalized to lowercase
 }
