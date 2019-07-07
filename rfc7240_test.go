@@ -10,15 +10,17 @@ import (
 func ExamplePrefer() {
 	header := http.Header{"Prefer": []string{
 		"wait=10, respond-async",
-		`Foo; Bar="quux, xyzzy"`,
+		`Foo; Bar="quux & xyzzy"`,
 	}}
 	prefer := Prefer(header)
-	fmt.Printf("%q\n", prefer["wait"])
-	fmt.Printf("%q\n", prefer["respond-async"])
-	fmt.Printf("%q\n", prefer["foo"])
-	// Output: {"10" map[]}
-	// {"" map[]}
-	// {"" map["bar":"quux, xyzzy"]}
+	fmt.Printf("%+v\n%+v\n%+v\n",
+		prefer["wait"],
+		prefer["respond-async"],
+		prefer["foo"],
+	)
+	// Output: {Value:10 Params:map[]}
+	// {Value: Params:map[]}
+	// {Value: Params:map[bar:quux & xyzzy]}
 }
 
 func TestPrefer(t *testing.T) {

@@ -58,7 +58,7 @@ func consumePrefParam(v string) (name, value, newv string) {
 
 // SetPrefer replaces the Prefer header in h (RFC 7240 with errata).
 // All keys must be valid tokens (RFC 7230 Section 3.2.6);
-// values may contain any text, which will be quoted and escaped as necessary.
+// values may contain any bytes except control characters.
 // See also AddPrefer.
 func SetPrefer(h http.Header, prefs map[string]Pref) {
 	h.Set("Prefer", buildPrefer(prefs))
