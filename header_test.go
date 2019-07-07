@@ -31,12 +31,12 @@ func checkFuzz(t *testing.T, name string, parseFunc, serializeFunc interface{}) 
 	t.Helper()
 	parseFuncV := reflect.ValueOf(parseFunc)
 	serializeFuncV := reflect.ValueOf(serializeFunc)
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 100; i++ {
 		t.Run("", func(t *testing.T) {
 			r := rand.New(rand.NewSource(int64(i)))
 			header := http.Header{}
 			for i := 0; i < 1+r.Intn(3); i++ {
-				b := make([]byte, r.Intn(32))
+				b := make([]byte, r.Intn(64))
 				for j := range b {
 					// Biased towards punctuation, to trigger more parser states.
 					const chars = "\x00 \t,;=-()'*/\"\\abcdefghijklmnopqrstuvwxyz"
