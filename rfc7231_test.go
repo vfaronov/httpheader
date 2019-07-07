@@ -102,11 +102,11 @@ func TestAllow(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Allow": {";;;"}},
-			[]string{},
+			[]string{""},
 		},
 		{
 			http.Header{"Allow": {";;;,GET"}},
-			[]string{"GET"},
+			[]string{"", "GET"},
 		},
 		{
 			http.Header{"Allow": {"GET;;;whatever, HEAD"}},
@@ -262,15 +262,15 @@ func TestServer(t *testing.T) {
 		},
 		{
 			http.Header{"Server": {"foo, bar, baz"}},
-			[]Product{{"foo", "", ""}},
+			[]Product{{"foo", "", ""}, {"bar", "", ""}, {"baz", "", ""}},
 		},
 		{
 			http.Header{"Server": {"foo; bar; baz"}},
-			[]Product{{"foo", "", ""}},
+			[]Product{{"foo", "", ""}, {"bar", "", ""}, {"baz", "", ""}},
 		},
 		{
 			http.Header{"Server": {"foo=1.2.3"}},
-			[]Product{{"foo", "", ""}},
+			[]Product{{"foo", "", ""}, {"1.2.3", "", ""}},
 		},
 	}
 	for _, test := range tests {

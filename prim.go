@@ -45,6 +45,7 @@ func iterElems(v string, vs []string) (newv string, newvs []string) {
 
 // consumeItem returns the item from the beginning of v, and the rest of v.
 // An item is a run of text up to whitespace or ,;= or extraDelim.
+// Callers should check that the item is non-empty if they need to make progress.
 func consumeItem(v string, extraDelim byte) (item, newv string) {
 	for i := 0; i < len(v); i++ {
 		switch v[i] {

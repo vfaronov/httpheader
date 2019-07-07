@@ -15,9 +15,7 @@ func Allow(h http.Header) []string {
 	for v, vs := iterElems("", h["Allow"]); vs != nil; v, vs = iterElems(v, vs) {
 		var method string
 		method, v = consumeItem(v, 0)
-		if method != "" {
-			methods = append(methods, method)
-		}
+		methods = append(methods, method)
 	}
 	if methods == nil && h["Allow"] != nil {
 		methods = make([]string, 0)
@@ -39,9 +37,7 @@ func Vary(h http.Header) []string {
 	for v, vs := iterElems("", h["Vary"]); vs != nil; v, vs = iterElems(v, vs) {
 		var name string
 		name, v = consumeItem(v, 0)
-		if name != "" {
-			names = append(names, http.CanonicalHeaderKey(name))
-		}
+		names = append(names, http.CanonicalHeaderKey(name))
 	}
 	return names
 }
@@ -96,7 +92,9 @@ func parseProducts(v string) []Product {
 		var product Product
 		product.Name, v = consumeItem(v, '/')
 		if product.Name == "" {
-			break
+			// Avoid infinite loop.
+			v = v[1:]
+			continue
 		}
 		if peek(v) == '/' {
 			product.Version, v = consumeItem(v[1:], 0)

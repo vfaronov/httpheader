@@ -39,7 +39,7 @@ func checkFuzz(t *testing.T, name string, parseFunc, serializeFunc interface{}) 
 				b := make([]byte, r.Intn(32))
 				for j := range b {
 					// Biased towards punctuation, to trigger more parser states.
-					const chars = " \t,;=-()'*/\"\\abcdefghijklmnopqrstuvwxyz"
+					const chars = "\x00 \t,;=-()'*/\"\\abcdefghijklmnopqrstuvwxyz"
 					b[j] = chars[r.Intn(len(chars))]
 				}
 				header.Add(name, string(b))
