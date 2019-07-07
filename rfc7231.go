@@ -2,7 +2,9 @@ package httpheader
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Allow parses the Allow header from h (RFC 7231 Section 7.4.1).
@@ -135,4 +137,43 @@ func serializeProducts(products []Product) string {
 		}
 	}
 	return b.String()
+}
+
+// RetryAfter parses the Retry-After header from h (RFC 7231 Section 7.1.3).
+// When it is specified as delay seconds, those are added to the Date header
+// if one exists in h, otherwise to the current time. If the header cannot
+// be parsed, a zero Time is returned.
+func RetryAfter(h http.Header) time.Time {
+	v := h.Get("Retry-After")
+	if v == "" {
+		return time.Time{}
+	}
+	switch v[0] {
+	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // delay-seconds
+		seconds, err := strconv.Atoi(v)
+		if err != nil {
+			return time.Time{}
+		}
+		// Strictly speaking, RFC 7231 says "number of seconds to delay
+		// after the response is received", not after it was originated (Date),
+		// but the response may have been stored or processed for a long time
+		// before being fed to us, so Date might even be closer than Now().
+		date, err := http.ParseTime(h.Get("Date"))
+		if err != nil {
+			date = time.Now()
+		}
+		return date.Add(time.Duration(seconds) * time.Second)
+
+	default: // HTTP-date
+		date, err := http.ParseTime(v)
+		if err != nil {
+			return time.Time{}
+		}
+		return date
+	}
+}
+
+// SetRetryAfter replaces the Retry-After header in h.
+func SetRetryAfter(h http.Header, after time.Time) {
+	h.Set("Retry-After", after.Format(http.TimeFormat))
 }

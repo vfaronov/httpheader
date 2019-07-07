@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 	"testing"
+	"time"
 )
 
 func ExampleAllow() {
@@ -304,4 +305,80 @@ func TestServerRoundTrip(t *testing.T) {
 			}
 		})
 	})
+}
+
+func ExampleRetryAfter() {
+	header := http.Header{
+		"Date":        {"Sun, 07 Jul 2019 08:03:32 GMT"},
+		"Retry-After": {"180"},
+	}
+	fmt.Print(RetryAfter(header))
+	// Output: 2019-07-07 08:06:32 +0000 UTC
+}
+
+func TestRetryAfter(t *testing.T) {
+	tests := []struct {
+		header http.Header
+		result time.Time
+	}{
+		// Valid headers.
+		{
+			http.Header{"Retry-After": {"Sun, 07 Jul 2019 08:06:01 GMT"}},
+			time.Date(2019, time.July, 7, 8, 6, 1, 0, time.UTC),
+		},
+		{
+			http.Header{
+				"Date":        {"Sun, 07 Jul 2019 08:06:01 GMT"},
+				"Retry-After": {"600"},
+			},
+			time.Date(2019, time.July, 7, 8, 16, 1, 0, time.UTC),
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Retry-After": {"whenever"}},
+			time.Time{},
+		},
+		{
+			http.Header{"Retry-After": {"Sun, 37 Jul 2019 08:06:01 GMT"}},
+			time.Time{},
+		},
+		{
+			http.Header{
+				"Date":        {"Sun, 07 Jul 2019 08:06:01 GMT"},
+				"Retry-After": {"60s"},
+			},
+			time.Time{},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			checkParse(t, test.header, test.result, RetryAfter(test.header))
+		})
+	}
+}
+
+func TestRetryAfterCurrentTime(t *testing.T) {
+	header := http.Header{"Retry-After": {"300"}}
+	now := time.Now()
+	target := now.Add(300 * time.Second)
+	parsed := RetryAfter(header)
+	if parsed.Before(target) || parsed.After(target.Add(1*time.Second)) {
+		t.Fatalf("got %v, expected within 1s of %v", parsed, target)
+	}
+	header["Date"] = []string{"some invalid value"}
+	parsed = RetryAfter(header)
+	if parsed.Before(target) || parsed.After(target.Add(1*time.Second)) {
+		t.Fatalf("got %v, expected within 1s of %v", parsed, target)
+	}
+}
+
+func TestRetryAfterFuzz(t *testing.T) {
+	checkFuzz(t, "Retry-After", RetryAfter, SetRetryAfter)
+}
+
+func TestRetryAfterRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetRetryAfter, RetryAfter, mkDate)
 }
