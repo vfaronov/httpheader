@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+// A Par represents some item together with name=value parameters.
+// Such a construct is used in several places in HTTP.
+type Par struct {
+	Item   string
+	Params map[string]string
+}
+
 var tokenExp = regexp.MustCompile("^[-!#$%&'*+.^_`|~0-9a-zA-Z]+$")
 
 func peek(v string) byte {
@@ -156,5 +163,59 @@ func writeTokenOrQuoted(b *strings.Builder, s string) {
 		b.WriteString(s)
 	} else {
 		writeQuoted(b, s)
+	}
+}
+
+func consumeParameterized(v string, lower bool) (par Par, newv string) {
+	par.Item, v = consumeItem(v, 0)
+	if lower {
+		par.Item = strings.ToLower(par.Item)
+	}
+	par.Params, v = consumeParams(v, lower)
+	return par, v
+}
+
+func consumeParams(v string, lower bool) (params map[string]string, newv string) {
+	for {
+		v = skipWS(v)
+		if peek(v) != ';' {
+			break
+		}
+		v = skipWS(v[1:])
+		switch peek(v) {
+		case ';', ',', 0:
+			// This is an empty parameter.
+		default:
+			var name, value string
+			name, value, v = consumeParam(v, lower)
+			if params == nil {
+				params = make(map[string]string)
+			}
+			params[name] = value
+		}
+	}
+	return params, v
+}
+
+func consumeParam(v string, lower bool) (name, value, newv string) {
+	name, v = consumeItem(v, 0)
+	if lower {
+		name = strings.ToLower(name)
+	}
+	v = skipWS(v)
+	if peek(v) == '=' {
+		v = skipWS(v[1:])
+		value, v = consumeItemOrQuoted(v)
+	}
+	return name, value, v
+}
+
+func writeParameterized(b *strings.Builder, par Par) {
+	b.WriteString(par.Item)
+	for name, value := range par.Params {
+		b.WriteString(";")
+		b.WriteString(name)
+		b.WriteString("=")
+		writeTokenOrQuoted(b, value)
 	}
 }

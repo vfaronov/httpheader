@@ -107,12 +107,14 @@ func TestPrefer(t *testing.T) {
 		},
 		{
 			// Whitespace around '=' is not allowed by RFC 7240 errata 4439.
+			// But we still parse it in consumeParam because it is
+			// allowed elsewhere (e.g. in RFC 7230 transfer-extension).
 			http.Header{"Prefer": {"foo = bar"}},
-			map[string]Pref{"foo": {"", nil}},
+			map[string]Pref{"foo": {"bar", nil}},
 		},
 		{
 			http.Header{"Prefer": {"foo = bar, baz = qux"}},
-			map[string]Pref{"foo": {"", nil}, "baz": {"", nil}},
+			map[string]Pref{"foo": {"bar", nil}, "baz": {"qux", nil}},
 		},
 		{
 			http.Header{"Prefer": {"foo=???"}},

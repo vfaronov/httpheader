@@ -18,42 +18,14 @@ func Prefer(h http.Header) map[string]Pref {
 	for v, vs := iterElems("", h["Prefer"]); vs != nil; v, vs = iterElems(v, vs) {
 		var name string
 		var pref Pref
-		name, pref.Value, v = consumePrefParam(v)
-		for {
-			v = skipWS(v)
-			if peek(v) != ';' {
-				break
-			}
-			v = skipWS(v[1:])
-			switch peek(v) {
-			case ';', ',':
-				// This is an empty parameter.
-			default:
-				var paramName, paramValue string
-				paramName, paramValue, v = consumePrefParam(v)
-				if pref.Params == nil {
-					pref.Params = make(map[string]string)
-				}
-				pref.Params[paramName] = paramValue
-			}
-		}
+		name, pref.Value, v = consumeParam(v, true)
+		pref.Params, v = consumeParams(v, true)
 		if r == nil {
 			r = make(map[string]Pref)
 		}
 		r[name] = pref
 	}
 	return r
-}
-
-func consumePrefParam(v string) (name, value, newv string) {
-	// RFC 7240 errata 4439 'preference-parameter':
-	// `name` or `name=value` or `name="quoted value"` (no WS around `=`)
-	name, v = consumeItem(v, 0)
-	name = strings.ToLower(name)
-	if peek(v) == '=' {
-		value, v = consumeItemOrQuoted(v[1:])
-	}
-	return name, value, v
 }
 
 // SetPrefer replaces the Prefer header in h (RFC 7240 with errata).

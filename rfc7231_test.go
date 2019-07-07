@@ -382,3 +382,144 @@ func TestRetryAfterFuzz(t *testing.T) {
 func TestRetryAfterRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetRetryAfter, RetryAfter, mkDate)
 }
+
+func ExampleContentType() {
+	header := http.Header{"Content-Type": {"Text/HTML;Charset=UTF-8"}}
+	fmt.Print(ContentType(header))
+	// Output: {text/html map[charset:UTF-8]}
+}
+
+func TestContentType(t *testing.T) {
+	tests := []struct {
+		header http.Header
+		result Par
+	}{
+		// Valid headers.
+		{
+			http.Header{"Content-Type": {"text/html"}},
+			Par{"text/html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"Text/HTML"}},
+			Par{"text/html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"application/vnd.api+json"}},
+			Par{"application/vnd.api+json", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text/html;charset=utf-8"}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+		{
+			http.Header{"Content-Type": {"text/html; charset=utf-8"}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+		{
+			http.Header{"Content-Type": {`Text/HTML; Charset="utf-8"`}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+		{
+			http.Header{"Content-Type": {"text/html\t; \t charset=utf-8"}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+		{
+			http.Header{"Content-Type": {
+				`application/foo; quux="xyz\\zy";bar=baz`,
+			}},
+			Par{"application/foo", map[string]string{
+				"bar":  "baz",
+				"quux": `xyz\zy`,
+			}},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Content-Type": {""}},
+			Par{},
+		},
+		{
+			http.Header{"Content-Type": {"text"}},
+			Par{"text", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text/plain/html"}},
+			Par{"text/plain/html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text+html"}},
+			Par{"text+html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text/html;;"}},
+			Par{"text/html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text/html;;charset=utf-8"}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+		{
+			http.Header{"Content-Type": {"text/html ; ; ; charset=utf-8"}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+		{
+			http.Header{"Content-Type": {"text/html; w3c; charset=utf-8"}},
+			Par{"text/html", map[string]string{
+				"w3c":     "",
+				"charset": "utf-8",
+			}},
+		},
+		{
+			http.Header{"Content-Type": {"text/html,charset=utf-8"}},
+			Par{"text/html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text/html charset=utf-8"}},
+			Par{"text/html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"charset=utf-8"}},
+			Par{"charset", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text/html=utf-8"}},
+			Par{"text/html", nil},
+		},
+		{
+			http.Header{"Content-Type": {"text/html; charset = utf-8"}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+		{
+			http.Header{"Content-Type": {`text/html;charset  = "utf-8"`}},
+			Par{"text/html", map[string]string{"charset": "utf-8"}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			checkParse(t, test.header, test.result, ContentType(test.header))
+		})
+	}
+}
+
+func TestContentTypeFuzz(t *testing.T) {
+	checkFuzz(t, "Content-Type", ContentType, SetContentType)
+}
+
+func TestContentTypeRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetContentType, ContentType, func(r *rand.Rand) interface{} {
+		return Par{
+			Item:   mkLowerToken(r).(string) + "/" + mkLowerToken(r).(string),
+			Params: mkMap(r, mkLowerToken, mkString).(map[string]string),
+		}
+	})
+}
+
+func ExampleSetContentType() {
+	header := http.Header{}
+	SetContentType(header, Par{
+		Item:   "text/html",
+		Params: map[string]string{"charset": "utf-8"},
+	})
+}

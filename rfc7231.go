@@ -177,3 +177,19 @@ func RetryAfter(h http.Header) time.Time {
 func SetRetryAfter(h http.Header, after time.Time) {
 	h.Set("Retry-After", after.Format(http.TimeFormat))
 }
+
+// ContentType parses the Content-Type header from h (RFC 7231 Section 3.1.1.5).
+// Media type and parameter names (but not values) are canonicalized to lowercase.
+func ContentType(h http.Header) Par {
+	ctype, _ := consumeParameterized(h.Get("Content-Type"), true)
+	return ctype
+}
+
+// SetContentType replaces the Content-Type header in h.
+// Media type and parameter names must be valid as per RFC 7231 Section 3.1.1.1;
+// parameter values may contain any bytes except control characters.
+func SetContentType(h http.Header, ctype Par) {
+	b := &strings.Builder{}
+	writeParameterized(b, ctype)
+	h.Set("Content-Type", b.String())
+}
