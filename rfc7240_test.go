@@ -21,18 +21,6 @@ func ExamplePrefer() {
 	// {"" map["bar":"quux, xyzzy"]}
 }
 
-func ExampleAddPrefer() {
-	header := http.Header{}
-	SetPrefer(header, map[string]Pref{
-		"wait":          {"10", nil},
-		"respond-async": {},
-		"foo": {
-			Value:  "bar, baz",
-			Params: map[string]string{"quux": "xyzzy"},
-		},
-	})
-}
-
 func TestPrefer(t *testing.T) {
 	tests := []struct {
 		header http.Header
@@ -146,6 +134,18 @@ func TestPrefer(t *testing.T) {
 			checkParse(t, test.header, test.result, Prefer(test.header))
 		})
 	}
+}
+
+func ExampleSetPrefer() {
+	header := http.Header{}
+	SetPrefer(header, map[string]Pref{
+		"wait":          {Value: "10"},
+		"respond-async": {},
+		"foo": {
+			Value:  "bar, baz",
+			Params: map[string]string{"quux": "xyzzy"},
+		},
+	})
 }
 
 func TestSetPrefer(t *testing.T) {
