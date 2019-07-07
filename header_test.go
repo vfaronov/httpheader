@@ -107,6 +107,13 @@ func mkToken(r *rand.Rand) interface{} {
 	return string(b)
 }
 
+func mkMaybeToken(r *rand.Rand) interface{} {
+	if r.Intn(2) == 0 {
+		return ""
+	}
+	return mkToken(r)
+}
+
 func mkLowerToken(r *rand.Rand) interface{} {
 	token := mkToken(r).(string)
 	return strings.ToLower(token)

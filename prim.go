@@ -44,11 +44,11 @@ func iterElems(v string, vs []string) (newv string, newvs []string) {
 }
 
 // consumeItem returns the item from the beginning of v, and the rest of v.
-// An item is a run of text up to whitespace, comma, semicolon, or equals sign.
-func consumeItem(v string) (item, newv string) {
+// An item is a run of text up to whitespace or ,;= or extraDelim.
+func consumeItem(v string, extraDelim byte) (item, newv string) {
 	for i := 0; i < len(v); i++ {
 		switch v[i] {
-		case ' ', '\t', ',', ';', '=':
+		case ' ', '\t', ',', ';', '=', extraDelim:
 			return v[:i], v[i:]
 		}
 	}
@@ -147,7 +147,7 @@ func consumeItemOrQuoted(v string) (text, newv string) {
 	if peek(v) == '"' {
 		return consumeQuoted(v)
 	}
-	return consumeItem(v)
+	return consumeItem(v, 0)
 }
 
 func writeTokenOrQuoted(b *strings.Builder, s string) {

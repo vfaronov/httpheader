@@ -22,10 +22,10 @@ func Warning(h http.Header) []WarningElem {
 	for v, vs := iterElems("", h["Warning"]); vs != nil; v, vs = iterElems(v, vs) {
 		var elem WarningElem
 		var codeStr string
-		codeStr, v = consumeItem(v)
+		codeStr, v = consumeItem(v, 0)
 		elem.Code, _ = strconv.Atoi(codeStr)
 		v = skipWS(v)
-		elem.Agent, v = consumeItem(v)
+		elem.Agent, v = consumeItem(v, 0)
 		v = skipWS(v)
 		elem.Text, v = consumeQuoted(v)
 		v = skipWS(v)

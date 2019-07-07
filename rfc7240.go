@@ -48,7 +48,7 @@ func Prefer(h http.Header) map[string]Pref {
 func consumePrefParam(v string) (name, value, newv string) {
 	// RFC 7240 errata 4439 'preference-parameter':
 	// `name` or `name=value` or `name="quoted value"` (no WS around `=`)
-	name, v = consumeItem(v)
+	name, v = consumeItem(v, 0)
 	name = strings.ToLower(name)
 	if peek(v) == '=' {
 		value, v = consumeItemOrQuoted(v[1:])
