@@ -158,7 +158,7 @@ func TestSetPrefer(t *testing.T) {
 		result http.Header
 	}{
 		{
-			map[string]Pref{"respond-async": Pref{}},
+			map[string]Pref{"respond-async": {}},
 			http.Header{"Prefer": {"respond-async"}},
 		},
 		{
