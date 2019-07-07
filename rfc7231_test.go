@@ -180,6 +180,16 @@ func TestUserAgentFuzz(t *testing.T) {
 	checkFuzz(t, "User-Agent", UserAgent, SetUserAgent)
 }
 
+func ExampleSetUserAgent() {
+	header := http.Header{}
+	SetUserAgent(header, []Product{
+		{Name: "My-App", Version: "1.2.3", Comment: "example.com"},
+		{Name: "Go-http-client"},
+	})
+	fmt.Printf("%q", header)
+	// Output: map["User-Agent":["My-App/1.2.3 (example.com) Go-http-client"]]
+}
+
 func TestServer(t *testing.T) {
 	tests := []struct {
 		header http.Header
