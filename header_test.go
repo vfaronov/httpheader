@@ -47,9 +47,9 @@ func checkFuzz(t *testing.T, name string, parseFunc, serializeFunc interface{}) 
 			}
 			t.Logf("header: %#v", header)
 			headerV := reflect.ValueOf(header)
-			resultV := parseFuncV.Call([]reflect.Value{headerV})[0]
+			resultV := parseFuncV.Call([]reflect.Value{headerV})
 			t.Logf("parsed: %#v", resultV)
-			serializeFuncV.Call([]reflect.Value{headerV, resultV})
+			serializeFuncV.Call(append([]reflect.Value{headerV}, resultV...))
 		})
 	}
 }
@@ -57,26 +57,38 @@ func checkFuzz(t *testing.T, name string, parseFunc, serializeFunc interface{}) 
 func checkRoundTrip(
 	t *testing.T,
 	serializeFunc, parseFunc interface{},
-	generator func(*rand.Rand) interface{},
+	generators ...func(*rand.Rand) interface{},
 ) {
 	// Property-based test: Serializing and then parsing a valid value
 	// should give the same value (modulo canonicalization).
-	// Generator is a function (composed of the various mk* functions below),
-	// to generate a random value suitable for serializeFunc.
+	// Each of generators is a function (composed of the various mk* functions
+	// below) to generate a random value suitable for the corresponding argument
+	// of serializeFunc.
 	t.Helper()
 	serializeFuncV := reflect.ValueOf(serializeFunc)
 	parseFuncV := reflect.ValueOf(parseFunc)
 	for i := 0; i < 100; i++ {
 		t.Run("", func(t *testing.T) {
 			r := rand.New(rand.NewSource(int64(i)))
-			headerV := reflect.ValueOf(http.Header{})
-			inputV := reflect.ValueOf(generator(r))
-			serializeFuncV.Call([]reflect.Value{headerV, inputV})
-			t.Logf("serialized: %#v", headerV)
-			outputV := parseFuncV.Call([]reflect.Value{headerV})[0]
-			if !reflect.DeepEqual(inputV.Interface(), outputV.Interface()) {
+			header := http.Header{}
+			var input []interface{}
+			for _, generator := range generators {
+				input = append(input, generator(r))
+			}
+			argsV := []reflect.Value{reflect.ValueOf(header)}
+			for _, in := range input {
+				argsV = append(argsV, reflect.ValueOf(in))
+			}
+			serializeFuncV.Call(argsV)
+			t.Logf("serialized: %#v", header)
+			outputV := parseFuncV.Call(argsV[:1])
+			var output []interface{}
+			for _, outV := range outputV {
+				output = append(output, outV.Interface())
+			}
+			if !reflect.DeepEqual(input, output) {
 				t.Errorf("round-trip failure:\ninput:  %#v\noutput: %#v",
-					inputV, outputV)
+					input, output)
 			}
 		})
 	}

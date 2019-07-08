@@ -5,13 +5,6 @@ import (
 	"strings"
 )
 
-// A Par represents some item together with name=value parameters.
-// Such a construct is used in several places in HTTP.
-type Par struct {
-	Item   string
-	Params map[string]string
-}
-
 var tokenExp = regexp.MustCompile("^[-!#$%&'*+.^_`|~0-9a-zA-Z]+$")
 
 func peek(v string) byte {
@@ -166,13 +159,17 @@ func writeTokenOrQuoted(b *strings.Builder, s string) {
 	}
 }
 
-func consumeParameterized(v string, lower bool) (par Par, newv string) {
-	par.Item, v = consumeItem(v, 0)
+func consumeParameterized(v string, lower bool) (
+	item string,
+	params map[string]string,
+	newv string,
+) {
+	item, v = consumeItem(v, 0)
 	if lower {
-		par.Item = strings.ToLower(par.Item)
+		item = strings.ToLower(item)
 	}
-	par.Params, v = consumeParams(v, lower)
-	return par, v
+	params, v = consumeParams(v, lower)
+	return item, params, v
 }
 
 func consumeParams(v string, lower bool) (params map[string]string, newv string) {
@@ -210,9 +207,9 @@ func consumeParam(v string, lower bool) (name, value, newv string) {
 	return name, value, v
 }
 
-func writeParameterized(b *strings.Builder, par Par) {
-	b.WriteString(par.Item)
-	for name, value := range par.Params {
+func writeParameterized(b *strings.Builder, item string, params map[string]string) {
+	b.WriteString(item)
+	for name, value := range params {
 		b.WriteString(";")
 		b.WriteString(name)
 		b.WriteString("=")

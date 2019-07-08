@@ -191,17 +191,18 @@ func SetRetryAfter(h http.Header, after time.Time) {
 	h.Set("Retry-After", after.Format(http.TimeFormat))
 }
 
-// ContentType parses the Content-Type header from h (RFC 7231 Section 3.1.1.5).
-// Media type and parameter names (but not values) are canonicalized to lowercase.
-func ContentType(h http.Header) Par {
-	ctype, _ := consumeParameterized(h.Get("Content-Type"), true)
-	return ctype
+// ContentType parses the Content-Type header from h (RFC 7231 Section 3.1.1.5),
+// returning the media type/subtype, canonicalized to lowercase, and any
+// parameters, with their names also lowercased.
+func ContentType(h http.Header) (mtype string, params map[string]string) {
+	mtype, params, _ = consumeParameterized(h.Get("Content-Type"), true)
+	return
 }
 
 // SetContentType replaces the Content-Type header in h.
-func SetContentType(h http.Header, ctype Par) {
+func SetContentType(h http.Header, mtype string, params map[string]string) {
 	b := &strings.Builder{}
-	writeParameterized(b, ctype)
+	writeParameterized(b, mtype, params)
 	h.Set("Content-Type", b.String())
 }
 
@@ -268,7 +269,7 @@ func SetAccept(h http.Header, elems []AcceptElem) {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		writeParameterized(b, Par{elem.Type, elem.Params})
+		writeParameterized(b, elem.Type, elem.Params)
 		if elem.Q != 1 || len(elem.Ext) > 0 {
 			b.WriteString(";q=")
 			// "A sender of qvalue MUST NOT generate more than three digits
