@@ -123,8 +123,40 @@ func TestAllow(t *testing.T) {
 
 func ExampleVary() {
 	header := http.Header{"Vary": {"cookie, accept-encoding"}}
-	fmt.Printf("%q", Vary(header))
-	// Output: ["Cookie" "Accept-Encoding"]
+	vary := Vary(header)
+	if vary["Accept-Encoding"] || vary["*"] {
+		// this response varies by the client's acceptable encoding
+	}
+}
+
+func TestVary(t *testing.T) {
+	tests := []struct {
+		header http.Header
+		result map[string]bool
+	}{
+		{
+			http.Header{"Vary": {"user-agent"}},
+			map[string]bool{"User-Agent": true},
+		},
+		{
+			http.Header{"Vary": {"accept,prefer"}},
+			map[string]bool{"Accept": true, "Prefer": true},
+		},
+		{
+			http.Header{"Vary": {"*"}},
+			map[string]bool{"*": true},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			checkParse(t, test.header, test.result, Vary(test.header))
+		})
+	}
+}
+
+func ExampleAddVary() {
+	header := http.Header{}
+	AddVary(header, map[string]bool{"Accept": true, "Accept-Encoding": true})
 }
 
 func TestVaryFuzz(t *testing.T) {
@@ -133,7 +165,8 @@ func TestVaryFuzz(t *testing.T) {
 
 func TestVaryRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetVary, Vary, func(r *rand.Rand) interface{} {
-		return mkSlice(r, mkHeaderName)
+		return mkMap(r, mkHeaderName,
+			func(r *rand.Rand) interface{} { return true })
 	})
 }
 

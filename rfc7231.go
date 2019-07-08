@@ -31,29 +31,48 @@ func SetAllow(h http.Header, methods []string) {
 	h.Set("Allow", strings.Join(methods, ", "))
 }
 
-// Vary parses the Vary header from h (RFC 7231 Section 7.1.4).
-// Parsed names are canonicalized with http.CanonicalHeaderKey.
-// A wildcard (Vary: *) is returned as a slice of 1 element.
-func Vary(h http.Header) []string {
-	var names []string
+// Vary parses the Vary header from h (RFC 7231 Section 7.1.4), returning a map
+// where keys are header names, canonicalized with http.CanonicalHeaderKey,
+// and values are all true. A wildcard (Vary: *) is returned as map[*:true],
+// so it must be checked explicitly.
+func Vary(h http.Header) map[string]bool {
+	var names map[string]bool
 	for v, vs := iterElems("", h["Vary"]); vs != nil; v, vs = iterElems(v, vs) {
 		var name string
 		name, v = consumeItem(v, 0)
-		names = append(names, http.CanonicalHeaderKey(name))
+		name = http.CanonicalHeaderKey(name)
+		if names == nil {
+			names = make(map[string]bool)
+		}
+		names[name] = true
 	}
 	return names
 }
 
 // SetVary replaces the Vary header in h.
-// Each of names must be a valid field-name as per RFC 7230 Section 3.2.
-// See also AddVary.
-func SetVary(h http.Header, names []string) {
-	h.Set("Vary", strings.Join(names, ", "))
+// Each key in names must be a valid field-name as per RFC 7230 Section 3.2.
+// Names mapping to false are ignored. See also AddVary.
+func SetVary(h http.Header, names map[string]bool) {
+	h.Set("Vary", buildVary(names))
 }
 
 // AddVary is like SetVary but appends instead of replacing.
-func AddVary(h http.Header, names []string) {
-	h.Add("Vary", strings.Join(names, ", "))
+func AddVary(h http.Header, names map[string]bool) {
+	h.Add("Vary", buildVary(names))
+}
+
+func buildVary(names map[string]bool) string {
+	b := &strings.Builder{}
+	for name, value := range names {
+		if !value {
+			continue
+		}
+		if b.Len() > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(name)
+	}
+	return b.String()
 }
 
 // A Product contains software information as found in the User-Agent
