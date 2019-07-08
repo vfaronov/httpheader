@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func checkParse(t *testing.T, header http.Header, expected, actual interface{}) {
@@ -106,6 +107,20 @@ func mkString(r *rand.Rand) interface{} {
 	return string(b)
 }
 
+func mkUTF8(r *rand.Rand) interface{} {
+	// Random but valid UTF-8.
+	b := make([]byte, 32)
+	r.Read(b)
+	for i := 0; i < len(b)-1; {
+		r, size := utf8.DecodeRune(b[i:])
+		if r == utf8.RuneError {
+			b[i] = '?'
+		}
+		i += size
+	}
+	return string(b)
+}
+
 func mkToken(r *rand.Rand) interface{} {
 	const (
 		punctuation = "-!#$%&'*+.^_`|~"
@@ -184,4 +199,17 @@ func mkMap(r *rand.Rand, key, value func(*rand.Rand) interface{}) interface{} {
 
 func mkParams(r *rand.Rand) interface{} {
 	return mkMap(r, mkLowerToken, mkString).(map[string]string)
+}
+
+func mkExtParams(r *rand.Rand) interface{} {
+	m := mkParams(r).(map[string]string)
+	// Replace some of the params with ext-params.
+	for key := range m {
+		if r.Intn(2) == 0 {
+			delete(m, key)
+			key = key + "*"
+			m[key] = mkUTF8(r).(string)
+		}
+	}
+	return m
 }
