@@ -545,7 +545,7 @@ func TestContentTypeRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetContentType, ContentType, func(r *rand.Rand) interface{} {
 		return Par{
 			Item:   mkLowerToken(r).(string) + "/" + mkLowerToken(r).(string),
-			Params: mkMap(r, mkLowerToken, mkString).(map[string]string),
+			Params: mkParams(r).(map[string]string),
 		}
 	})
 }
@@ -1002,8 +1002,8 @@ func TestAcceptRoundTrip(t *testing.T) {
 			elem := AcceptElem{
 				Type:   mkLowerToken(r).(string) + "/" + mkLowerToken(r).(string),
 				Q:      mkQValue(r).(float32),
-				Params: mkMap(r, mkLowerToken, mkString).(map[string]string),
-				Ext:    mkMap(r, mkLowerToken, mkString).(map[string]string),
+				Params: mkParams(r).(map[string]string),
+				Ext:    mkParams(r).(map[string]string),
 			}
 			delete(elem.Params, "q")
 			delete(elem.Ext, "q")

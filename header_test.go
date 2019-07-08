@@ -169,3 +169,7 @@ func mkMap(r *rand.Rand, key, value func(*rand.Rand) interface{}) interface{} {
 	}
 	return mapV.Interface()
 }
+
+func mkParams(r *rand.Rand) interface{} {
+	return mkMap(r, mkLowerToken, mkString).(map[string]string)
+}

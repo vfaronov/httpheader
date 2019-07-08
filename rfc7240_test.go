@@ -210,7 +210,7 @@ func TestPreferRoundTrip(t *testing.T) {
 		return mkMap(r, mkLowerToken, func(r *rand.Rand) interface{} {
 			return Pref{
 				Value:  mkString(r).(string),
-				Params: mkMap(r, mkLowerToken, mkString).(map[string]string),
+				Params: mkParams(r).(map[string]string),
 			}
 		})
 	})
