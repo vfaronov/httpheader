@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -1009,4 +1010,119 @@ func TestAcceptRoundTrip(t *testing.T) {
 			return elem
 		})
 	})
+}
+
+func ExampleMatchAccept() {
+	header := http.Header{"Accept": {"text/html, text/*;q=0.1"}}
+	accept := Accept(header)
+	fmt.Println(MatchAccept(accept, "text/html").Q)
+	fmt.Println(MatchAccept(accept, "text/plain").Q)
+	fmt.Println(MatchAccept(accept, "image/gif").Q)
+	// Output: 1
+	// 0.1
+	// 0
+}
+
+func TestMatchAccept(t *testing.T) {
+	tests := []struct {
+		accept    []AcceptElem
+		mediaType string
+		result    AcceptElem
+	}{
+		{
+			nil,
+			"text/html",
+			AcceptElem{},
+		},
+		{
+			[]AcceptElem{{Type: "text/plain", Q: 1}},
+			"text/html",
+			AcceptElem{},
+		},
+		{
+			[]AcceptElem{{Type: "text/plain", Q: 1}, {Type: "text/html", Q: 1}},
+			"text/html",
+			AcceptElem{Type: "text/html", Q: 1},
+		},
+		{
+			[]AcceptElem{{Type: "text/plain", Q: 1}, {Type: "text/html", Q: 1}},
+			"Text/HTML",
+			AcceptElem{Type: "text/html", Q: 1},
+		},
+		{
+			[]AcceptElem{
+				{Type: "*/*", Q: 0.1},
+				{Type: "text/*", Q: 0.5},
+				{Type: "text/plain", Q: 0.8},
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"format": "flowed"},
+				},
+			},
+			"image/gif",
+			AcceptElem{Type: "*/*", Q: 0.1},
+		},
+		{
+			[]AcceptElem{
+				{Type: "*/*", Q: 0.1},
+				{Type: "text/*", Q: 0.5},
+				{Type: "text/plain", Q: 0.8},
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"format": "flowed"},
+				},
+			},
+			"text/html",
+			AcceptElem{Type: "text/*", Q: 0.5},
+		},
+		{
+			[]AcceptElem{
+				{Type: "*/*", Q: 0.1},
+				{Type: "text/*", Q: 0.5},
+				{Type: "text/plain", Q: 0.8},
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"format": "flowed"},
+				},
+			},
+			"text/plain",
+			AcceptElem{Type: "text/plain", Q: 0.8},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"format": "flowed"},
+				},
+				{Type: "text/plain", Q: 0.8},
+			},
+			"text/plain",
+			AcceptElem{Type: "text/plain", Q: 0.8},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"format": "flowed"},
+				},
+				{Type: "text/*", Q: 0.5},
+			},
+			"text/plain",
+			AcceptElem{Type: "text/*", Q: 0.5},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			actual := MatchAccept(test.accept, test.mediaType)
+			if !reflect.DeepEqual(test.result, actual) {
+				t.Fatalf("looking up %v in %#v:\nexpected: %#v\nactual:   %#v",
+					test.mediaType, test.accept, test.result, actual)
+			}
+		})
+	}
 }

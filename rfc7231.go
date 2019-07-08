@@ -224,6 +224,7 @@ type AcceptElem struct {
 }
 
 // Accept parses the Accept header from h (RFC 7231 Section 5.3.2).
+// The function MatchAccept is useful for working with the returned slice.
 func Accept(h http.Header) []AcceptElem {
 	var elems []AcceptElem
 	for v, vs := iterElems("", h["Accept"]); vs != nil; v, vs = iterElems(v, vs) {
@@ -288,4 +289,35 @@ func SetAccept(h http.Header, elems []AcceptElem) {
 		writeNullableParams(b, elem.Ext)
 	}
 	h.Set("Accept", b.String())
+}
+
+// MatchAccept searches accept for the element that most closely matches
+// mediaType, according to precedence rules of RFC 7231 Section 5.3.2.
+// Only the bare type/subtype can be matched; elements with Params are
+// not considered. If nothing matches mediaType, a zero AcceptElem is returned.
+func MatchAccept(accept []AcceptElem, mediaType string) AcceptElem {
+	mediaType = strings.ToLower(mediaType)
+	typePrefix := mediaType
+	if pos := strings.IndexByte(mediaType, '/'); pos > 0 {
+		typePrefix = mediaType[:pos+1] // "text/plain" -> "text/"
+	}
+	bestElem, bestPrecedence := AcceptElem{}, 0
+	for _, elem := range accept {
+		if len(elem.Params) > 0 {
+			continue
+		}
+		precedence := 0
+		switch {
+		case elem.Type == mediaType:
+			precedence = 3
+		case strings.HasPrefix(elem.Type, typePrefix) && strings.HasSuffix(elem.Type, "/*"):
+			precedence = 2
+		case elem.Type == "*/*":
+			precedence = 1
+		}
+		if precedence > bestPrecedence {
+			bestElem, bestPrecedence = elem, precedence
+		}
+	}
+	return bestElem
 }
