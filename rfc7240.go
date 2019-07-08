@@ -7,7 +7,7 @@ import (
 
 // A Pref contains a preference's value and any associated parameters (RFC 7240).
 type Pref struct {
-	Value  string            // must be a valid token
+	Value  string
 	Params map[string]string // keys are canonicalized to lowercase
 }
 
@@ -29,8 +29,6 @@ func Prefer(h http.Header) map[string]Pref {
 }
 
 // SetPrefer replaces the Prefer header in h (RFC 7240 with errata).
-// All keys must be valid tokens (RFC 7230 Section 3.2.6);
-// values may contain any bytes except control characters.
 // See also AddPrefer.
 func SetPrefer(h http.Header, prefs map[string]Pref) {
 	h.Set("Prefer", buildPrefer(prefs))

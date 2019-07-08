@@ -26,7 +26,6 @@ func Allow(h http.Header) []string {
 }
 
 // SetAllow replaces the Allow header in h.
-// Each of methods must be valid as per RFC 7230 Section 7.1.1.
 func SetAllow(h http.Header, methods []string) {
 	h.Set("Allow", strings.Join(methods, ", "))
 }
@@ -50,7 +49,6 @@ func Vary(h http.Header) map[string]bool {
 }
 
 // SetVary replaces the Vary header in h.
-// Each key in names must be a valid field-name as per RFC 7230 Section 3.2.
 // Names mapping to false are ignored. See also AddVary.
 func SetVary(h http.Header, names map[string]bool) {
 	h.Set("Vary", buildVary(names))
@@ -89,9 +87,6 @@ func UserAgent(h http.Header) []Product {
 }
 
 // SetUserAgent replaces the User-Agent header in h.
-// In each of products, Name must be a valid token (RFC 7230 Section 7.7.1)
-// and Version must be a valid token if not empty; Comment may contain any bytes
-// except control characters.
 func SetUserAgent(h http.Header, products []Product) {
 	h.Set("User-Agent", serializeProducts(products))
 }
@@ -102,7 +97,6 @@ func Server(h http.Header) []Product {
 }
 
 // SetServer replaces the Server header in h.
-// Each of products must obey the same requirements as for SetUserAgent.
 func SetServer(h http.Header, products []Product) {
 	h.Set("Server", serializeProducts(products))
 }
@@ -205,8 +199,6 @@ func ContentType(h http.Header) Par {
 }
 
 // SetContentType replaces the Content-Type header in h.
-// Media type and parameter names must be valid as per RFC 7231 Section 3.1.1.1;
-// parameter values may contain any bytes except control characters.
 func SetContentType(h http.Header, ctype Par) {
 	b := &strings.Builder{}
 	writeParameterized(b, ctype)
@@ -267,12 +259,9 @@ func Accept(h http.Header) []AcceptElem {
 }
 
 // SetAccept replaces the Accept header in h.
-// In each of elems, Type must be a valid media range (RFC 7231 Section 5.3.2),
-// Q must be a valid qvalue (RFC 7231 Section 5.3.1), and all map keys must be
-// valid tokens (RFC 7230 Section 3.2.6); map values may contain any bytes except
-// control characters.
 //
-// Note: Q must be set explicitly to avoid sending "q=0", meaning "not acceptable".
+// Note: Q in elems must be set explicitly to avoid sending "q=0",
+// which would mean "not acceptable".
 func SetAccept(h http.Header, elems []AcceptElem) {
 	b := &strings.Builder{}
 	for i, elem := range elems {
