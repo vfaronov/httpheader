@@ -54,14 +54,7 @@ func buildPrefer(prefs map[string]Pref) string {
 			b.WriteString("=")
 			writeTokenOrQuoted(b, pref.Value)
 		}
-		for paramName, paramValue := range pref.Params {
-			b.WriteString(";")
-			b.WriteString(paramName)
-			if paramValue != "" {
-				b.WriteString("=")
-				writeTokenOrQuoted(b, paramValue)
-			}
-		}
+		writeNullableParams(b, pref.Params)
 	}
 	return b.String()
 }

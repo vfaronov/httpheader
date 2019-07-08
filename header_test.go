@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -134,6 +135,13 @@ func mkMaybeDate(r *rand.Rand) interface{} {
 		return time.Time{}
 	}
 	return mkDate(r)
+}
+
+func mkQValue(r *rand.Rand) interface{} {
+	q := r.Float64()
+	// Truncate to 3 digits after decimal point.
+	q, _ = strconv.ParseFloat(strconv.FormatFloat(q, 'f', 3, 64), 64)
+	return float32(q)
 }
 
 func mkSlice(r *rand.Rand, value func(*rand.Rand) interface{}) interface{} {

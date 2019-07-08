@@ -219,3 +219,14 @@ func writeParameterized(b *strings.Builder, par Par) {
 		writeTokenOrQuoted(b, value)
 	}
 }
+
+func writeNullableParams(b *strings.Builder, params map[string]string) {
+	for name, value := range params {
+		b.WriteString(";")
+		b.WriteString(name)
+		if value != "" {
+			b.WriteString("=")
+			writeTokenOrQuoted(b, value)
+		}
+	}
+}

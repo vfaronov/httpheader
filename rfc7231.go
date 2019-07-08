@@ -193,3 +193,80 @@ func SetContentType(h http.Header, ctype Par) {
 	writeParameterized(b, ctype)
 	h.Set("Content-Type", b.String())
 }
+
+// An AcceptElem represents one element of the Accept header
+// (RFC 7231 Section 5.3.2).
+type AcceptElem struct {
+	Type string  // media range, canonicalized to lowercase
+	Q    float32 // quality value
+	// All map keys are canonicalized to lowercase.
+	Params map[string]string // media type parameters
+	Ext    map[string]string // extension parameters
+}
+
+// Accept parses the Accept header from h (RFC 7231 Section 5.3.2).
+func Accept(h http.Header) []AcceptElem {
+	var elems []AcceptElem
+	for v, vs := iterElems("", h["Accept"]); vs != nil; v, vs = iterElems(v, vs) {
+		elem := AcceptElem{Q: 1}
+		elem.Type, v = consumeItem(v, 0)
+		elem.Type = strings.ToLower(elem.Type)
+		afterQ := false
+		for {
+			v = skipWS(v)
+			if peek(v) != ';' {
+				break
+			}
+			v = skipWS(v[1:])
+			if c := peek(v); c == ';' || c == ',' || c == 0 {
+				// This is an empty parameter.
+				continue
+			}
+			var name, value string
+			name, value, v = consumeParam(v, true)
+			switch {
+			case name == "q":
+				qvalue, _ := strconv.ParseFloat(value, 32)
+				elem.Q = float32(qvalue)
+				afterQ = true
+			case afterQ:
+				if elem.Ext == nil {
+					elem.Ext = make(map[string]string)
+				}
+				elem.Ext[name] = value
+			default:
+				if elem.Params == nil {
+					elem.Params = make(map[string]string)
+				}
+				elem.Params[name] = value
+			}
+		}
+		elems = append(elems, elem)
+	}
+	return elems
+}
+
+// SetAccept replaces the Accept header in h.
+// In each of elems, Type must be a valid media range (RFC 7231 Section 5.3.2),
+// Q must be a valid qvalue (RFC 7231 Section 5.3.1), and all map keys must be
+// valid tokens (RFC 7230 Section 3.2.6); map values may contain any bytes except
+// control characters.
+//
+// Note: Q must be set explicitly to avoid sending "q=0", meaning "not acceptable".
+func SetAccept(h http.Header, elems []AcceptElem) {
+	b := &strings.Builder{}
+	for i, elem := range elems {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		writeParameterized(b, Par{elem.Type, elem.Params})
+		if elem.Q != 1 || len(elem.Ext) > 0 {
+			b.WriteString(";q=")
+			// "A sender of qvalue MUST NOT generate more than three digits
+			// after the decimal point."
+			b.WriteString(strconv.FormatFloat(float64(elem.Q), 'g', 3, 32))
+		}
+		writeNullableParams(b, elem.Ext)
+	}
+	h.Set("Accept", b.String())
+}

@@ -523,3 +523,457 @@ func ExampleSetContentType() {
 		Params: map[string]string{"charset": "utf-8"},
 	})
 }
+
+func ExampleAccept() {
+	header := http.Header{"Accept": {"Text/HTML, Text/*;Q=0.1"}}
+	fmt.Printf("%+v", Accept(header))
+	// Output: [{Type:text/html Q:1 Params:map[] Ext:map[]} {Type:text/* Q:0.1 Params:map[] Ext:map[]}]
+}
+
+func ExampleAccept_params() {
+	header := http.Header{"Accept": {"text/html; charset=utf-8; q=1; validate"}}
+	fmt.Printf("%+v", Accept(header))
+	// Output: [{Type:text/html Q:1 Params:map[charset:utf-8] Ext:map[validate:]}]
+}
+
+func TestAccept(t *testing.T) {
+	tests := []struct {
+		header http.Header
+		result []AcceptElem
+	}{
+		// Valid headers.
+		{
+			http.Header{"Accept": {"*/*"}},
+			[]AcceptElem{{Type: "*/*", Q: 1}},
+		},
+		{
+			http.Header{"Accept": {"text/html"}},
+			[]AcceptElem{{Type: "text/html", Q: 1}},
+		},
+		{
+			http.Header{"Accept": {"text/html, text/plain"}},
+			[]AcceptElem{{Type: "text/html", Q: 1}, {Type: "text/plain", Q: 1}},
+		},
+		{
+			http.Header{"Accept": {"text/html, text/*, */*"}},
+			[]AcceptElem{
+				{Type: "text/html", Q: 1},
+				{Type: "text/*", Q: 1},
+				{Type: "*/*", Q: 1},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/html, text/*;q=0.25"}},
+			[]AcceptElem{{Type: "text/html", Q: 1}, {Type: "text/*", Q: 0.25}},
+		},
+		{
+			http.Header{"Accept": {"text/html;q=0.25"}},
+			[]AcceptElem{{Type: "text/html", Q: 0.25}},
+		},
+		{
+			http.Header{"Accept": {"text/html; q=1, text/*; q=0.5"}},
+			[]AcceptElem{{Type: "text/html", Q: 1}, {Type: "text/*", Q: 0.5}},
+		},
+		{
+			http.Header{"Accept": {"text/html;charset=utf-8, text/*;q=0.5"}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      1,
+					Params: map[string]string{"charset": "utf-8"},
+				},
+				{
+					Type: "text/*",
+					Q:    0.5,
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/html;charset=utf-8;q=0.25"}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      0.25,
+					Params: map[string]string{"charset": "utf-8"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/html;\tcharset=utf-8;  q=0.25"}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      0.25,
+					Params: map[string]string{"charset": "utf-8"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML;  Charset="UTF-8"`}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      1,
+					Params: map[string]string{"charset": "UTF-8"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/html;q=1;foo=bar"}},
+			[]AcceptElem{
+				{
+					Type: "text/html",
+					Q:    1,
+					Ext:  map[string]string{"foo": "bar"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML; Foo="bar; baz; qux"`}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      1,
+					Params: map[string]string{"foo": "bar; baz; qux"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML; Q=1; Foo="Bar; Baz; Qux"`}},
+			[]AcceptElem{
+				{
+					Type: "text/html",
+					Q:    1,
+					Ext:  map[string]string{"foo": "Bar; Baz; Qux"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML; Foo="Bar; Baz"; Q=1; Qux="Xyzzy"`}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      1,
+					Params: map[string]string{"foo": "Bar; Baz"},
+					Ext:    map[string]string{"qux": "Xyzzy"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML; Q=1; Foo; Bar=Baz`}},
+			[]AcceptElem{
+				{
+					Type: "text/html",
+					Q:    1,
+					Ext:  map[string]string{"foo": "", "bar": "Baz"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML; Q=1; Foo=Bar; Baz`}},
+			[]AcceptElem{
+				{
+					Type: "text/html",
+					Q:    1,
+					Ext:  map[string]string{"foo": "Bar", "baz": ""},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML; Q=1; Foo=Bar; Baz=""`}},
+			[]AcceptElem{
+				{
+					Type: "text/html",
+					Q:    1,
+					Ext:  map[string]string{"foo": "Bar", "baz": ""},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`Text/HTML; Q=1; Foo=Bar; Baz, */*; Q=0.25`}},
+			[]AcceptElem{
+				{
+					Type: "text/html",
+					Q:    1,
+					Ext:  map[string]string{"foo": "Bar", "baz": ""},
+				},
+				{
+					Type: "*/*",
+					Q:    0.25,
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {
+				"text/plain; q=0.5, text/html",
+				"text/x-dvi; q=0.8, text/x-c",
+			}},
+			[]AcceptElem{
+				{Type: "text/plain", Q: 0.5},
+				{Type: "text/html", Q: 1},
+				{Type: "text/x-dvi", Q: 0.8},
+				{Type: "text/x-c", Q: 1},
+			},
+		},
+		{
+			http.Header{"Accept": {
+				"application/json",
+				"application/vnd.api+json",
+			}},
+			[]AcceptElem{
+				{Type: "application/json", Q: 1},
+				{Type: "application/vnd.api+json", Q: 1},
+			},
+		},
+		{
+			http.Header{"Accept": {
+				"text/*, text/plain, text/plain;format=flowed, */*",
+			}},
+			[]AcceptElem{
+				{
+					Type: "text/*",
+					Q:    1,
+				},
+				{
+					Type: "text/plain",
+					Q:    1,
+				},
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"format": "flowed"},
+				},
+				{
+					Type: "*/*",
+					Q:    1,
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {"*/* ; q=1 ; whatever"}},
+			[]AcceptElem{
+				{Type: "*/*", Q: 1, Ext: map[string]string{"whatever": ""}},
+			},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Accept": {""}},
+			nil,
+		},
+		{
+			http.Header{"Accept": {"text"}},
+			[]AcceptElem{{Type: "text", Q: 1}},
+		},
+		{
+			http.Header{"Accept": {"text html"}},
+			[]AcceptElem{{Type: "text", Q: 1}},
+		},
+		{
+			http.Header{"Accept": {"text/html/plain"}},
+			[]AcceptElem{{Type: "text/html/plain", Q: 1}},
+		},
+		{
+			http.Header{"Accept": {"text/html; text/plain"}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      1,
+					Params: map[string]string{"text/plain": ""},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/html ; charset = utf-8 ; "}},
+			[]AcceptElem{
+				{
+					Type:   "text/html",
+					Q:      1,
+					Params: map[string]string{"charset": "utf-8"},
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {`application/xml, */*;q="0.1"`}},
+			[]AcceptElem{
+				{Type: "application/xml", Q: 1},
+				{Type: "*/*", Q: 0.1},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/plain; prose, text/plain; q=0.5"}},
+			[]AcceptElem{
+				{Type: "text/plain", Q: 1, Params: map[string]string{"prose": ""}},
+				{Type: "text/plain", Q: 0.5},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/plain; charset=, text/html"}},
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"charset": ""},
+				},
+				{
+					Type: "text/html",
+					Q:    1,
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {
+				"text/plain; charset=; format=flowed, text/html",
+			}},
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"charset": "", "format": "flowed"},
+				},
+				{
+					Type: "text/html",
+					Q:    1,
+				},
+			},
+		},
+		{
+			http.Header{"Accept": {"text/plain;;;charset=utf-8;,text/html"}},
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"charset": "utf-8"},
+				},
+				{
+					Type: "text/html",
+					Q:    1,
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			checkParse(t, test.header, test.result, Accept(test.header))
+		})
+	}
+}
+
+func ExampleSetAccept() {
+	header := http.Header{}
+	SetAccept(header, []AcceptElem{
+		{Type: "application/json", Q: 1},
+		{Type: "*/*", Q: 0.1},
+	})
+}
+
+func TestSetAccept(t *testing.T) {
+	tests := []struct {
+		input  []AcceptElem
+		result http.Header
+	}{
+		{
+			[]AcceptElem{{Type: "text/html", Q: 1}},
+			http.Header{"Accept": {"text/html"}},
+		},
+		{
+			[]AcceptElem{{Type: "image/webp", Q: 1}, {Type: "*/*", Q: 1}},
+			http.Header{"Accept": {"image/webp, */*"}},
+		},
+		{
+			[]AcceptElem{{Type: "text/html"}},
+			http.Header{"Accept": {"text/html;q=0"}},
+		},
+		{
+			[]AcceptElem{{Type: "text/html", Q: 0.1234567}},
+			http.Header{"Accept": {"text/html;q=0.123"}},
+		},
+		{
+			[]AcceptElem{{Type: "text/html", Q: 0.001}},
+			http.Header{"Accept": {"text/html;q=0.001"}},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"foo": "bar"},
+				}},
+			http.Header{"Accept": {"text/plain;foo=bar"}},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      0.5,
+					Params: map[string]string{"foo": "bar"},
+				}},
+			http.Header{"Accept": {"text/plain;foo=bar;q=0.5"}},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"foo": "bar; baz"},
+				}},
+			http.Header{"Accept": {`text/plain;foo="bar; baz"`}},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type:   "text/plain",
+					Q:      1,
+					Params: map[string]string{"foo": ""},
+				}},
+			http.Header{"Accept": {`text/plain;foo=""`}},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type: "text/plain",
+					Q:    1,
+					Ext:  map[string]string{"foo": "bar"},
+				}},
+			http.Header{"Accept": {"text/plain;q=1;foo=bar"}},
+		},
+		{
+			[]AcceptElem{
+				{
+					Type: "text/plain",
+					Q:    1,
+					Ext:  map[string]string{"foo": ""},
+				}},
+			http.Header{"Accept": {"text/plain;q=1;foo"}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			header := http.Header{}
+			SetAccept(header, test.input)
+			checkSerialize(t, test.input, test.result, header)
+		})
+	}
+}
+
+func TestAcceptFuzz(t *testing.T) {
+	checkFuzz(t, "Accept", Accept, SetAccept)
+}
+
+func TestAcceptRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetAccept, Accept, func(r *rand.Rand) interface{} {
+		return mkSlice(r, func(r *rand.Rand) interface{} {
+			elem := AcceptElem{
+				Type:   mkLowerToken(r).(string) + "/" + mkLowerToken(r).(string),
+				Q:      mkQValue(r).(float32),
+				Params: mkMap(r, mkLowerToken, mkString).(map[string]string),
+				Ext:    mkMap(r, mkLowerToken, mkString).(map[string]string),
+			}
+			delete(elem.Params, "q")
+			delete(elem.Ext, "q")
+			return elem
+		})
+	})
+}
