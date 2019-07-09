@@ -70,21 +70,15 @@ func TestContentDisposition(t *testing.T) {
 			},
 		},
 		{
+			// RFC 8187 no longer requires us to support ISO-8859-1.
 			http.Header{"Content-Disposition": {
 				`Attachment; Filename="Hola mundo!.txt"; Filename*=iso-8859-1'es'%a1Hola%20mundo!.txt`,
 			}},
 			"attachment",
 			map[string]string{
 				"filename":  "Hola mundo!.txt",
-				"filename*": "¡Hola mundo!.txt",
+				"filename*": "iso-8859-1'es'%a1Hola%20mundo!.txt",
 			},
-		},
-		{
-			http.Header{"Content-Disposition": {
-				"attachment;filename*=ISO-8859-1'en-GB'hello!.txt",
-			}},
-			"attachment",
-			map[string]string{"filename*": "hello!.txt"},
 		},
 		{
 			http.Header{"Content-Disposition": {
@@ -123,15 +117,6 @@ func TestContentDisposition(t *testing.T) {
 			map[string]string{"filename*": "''"},
 		},
 		{
-			// RFC 5987 forbids charsets other than UTF-8 and ISO-8859-1,
-			// reserving them for future use.
-			http.Header{"Content-Disposition": {
-				"attachment; filename*=SOMECHARSET321''%32%33%34.txt",
-			}},
-			"attachment",
-			map[string]string{"filename*": "SOMECHARSET321''%32%33%34.txt"},
-		},
-		{
 			// Bad UTF-8 after percent-decoding.
 			http.Header{"Content-Disposition": {
 				"attachment; filename*=utf-8''%81%82%83%84.txt",
@@ -156,7 +141,7 @@ func TestContentDisposition(t *testing.T) {
 			map[string]string{"filename*": "utf-8'hello.txt"},
 		},
 		{
-			// Not RFC 5987 syntax at all.
+			// Not RFC 8187 syntax at all.
 			http.Header{"Content-Disposition": {
 				"attachment; filename*=%81%82%83%84.txt",
 			}},
