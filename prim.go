@@ -159,20 +159,18 @@ func writeTokenOrQuoted(b *strings.Builder, s string) {
 	}
 }
 
-func consumeParameterized(v string, lower bool) (
+func consumeParameterized(v string) (
 	item string,
 	params map[string]string,
 	newv string,
 ) {
 	item, v = consumeItem(v)
-	if lower {
-		item = strings.ToLower(item)
-	}
-	params, v = consumeParams(v, lower)
+	item = strings.ToLower(item)
+	params, v = consumeParams(v)
 	return item, params, v
 }
 
-func consumeParams(v string, lower bool) (params map[string]string, newv string) {
+func consumeParams(v string) (params map[string]string, newv string) {
 	for {
 		v = skipWS(v)
 		if peek(v) != ';' {
@@ -184,7 +182,7 @@ func consumeParams(v string, lower bool) (params map[string]string, newv string)
 			// This is an empty parameter.
 		default:
 			var name, value string
-			name, value, v = consumeParam(v, lower)
+			name, value, v = consumeParam(v)
 			if params == nil {
 				params = make(map[string]string)
 			}
@@ -194,11 +192,9 @@ func consumeParams(v string, lower bool) (params map[string]string, newv string)
 	return params, v
 }
 
-func consumeParam(v string, lower bool) (name, value, newv string) {
+func consumeParam(v string) (name, value, newv string) {
 	name, v = consumeItem(v)
-	if lower {
-		name = strings.ToLower(name)
-	}
+	name = strings.ToLower(name)
 	v = skipWS(v)
 	if peek(v) == '=' {
 		v = skipWS(v[1:])

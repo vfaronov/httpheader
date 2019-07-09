@@ -18,8 +18,8 @@ func Prefer(h http.Header) map[string]Pref {
 	for v, vs := iterElems("", h["Prefer"]); vs != nil; v, vs = iterElems(v, vs) {
 		var name string
 		var pref Pref
-		name, pref.Value, v = consumeParam(v, true)
-		pref.Params, v = consumeParams(v, true)
+		name, pref.Value, v = consumeParam(v)
+		pref.Params, v = consumeParams(v)
 		if r == nil {
 			r = make(map[string]Pref)
 		}

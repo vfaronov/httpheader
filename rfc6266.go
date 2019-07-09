@@ -12,7 +12,7 @@ import (
 // are automatically decoded from RFC 5987 encoding, but their UTF-8 is not
 // validated.
 func ContentDisposition(h http.Header) (dtype string, params map[string]string) {
-	dtype, params, _ = consumeParameterized(h.Get("Content-Disposition"), true)
+	dtype, params, _ = consumeParameterized(h.Get("Content-Disposition"))
 	for name, value := range params {
 		if strings.HasSuffix(name, "*") {
 			decoded, err := decodeExtValue(value)

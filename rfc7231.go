@@ -196,7 +196,7 @@ func SetRetryAfter(h http.Header, after time.Time) {
 // returning the media type/subtype, canonicalized to lowercase, and any
 // parameters, with their names also lowercased.
 func ContentType(h http.Header) (mtype string, params map[string]string) {
-	mtype, params, _ = consumeParameterized(h.Get("Content-Type"), true)
+	mtype, params, _ = consumeParameterized(h.Get("Content-Type"))
 	return
 }
 
@@ -237,7 +237,7 @@ func Accept(h http.Header) []AcceptElem {
 				continue
 			}
 			var name, value string
-			name, value, v = consumeParam(v, true)
+			name, value, v = consumeParam(v)
 			switch {
 			case name == "q":
 				qvalue, _ := strconv.ParseFloat(value, 32)
