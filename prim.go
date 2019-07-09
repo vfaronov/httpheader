@@ -177,17 +177,16 @@ func consumeParams(v string) (params map[string]string, newv string) {
 			break
 		}
 		v = skipWS(v[1:])
-		switch peek(v) {
-		case ';', ',', 0:
+		if c := peek(v); c == ';' || c == ',' || c == 0 {
 			// This is an empty parameter.
-		default:
-			var name, value string
-			name, value, v = consumeParam(v)
-			if params == nil {
-				params = make(map[string]string)
-			}
-			params[name] = value
+			continue
 		}
+		var name, value string
+		name, value, v = consumeParam(v)
+		if params == nil {
+			params = make(map[string]string)
+		}
+		params[name] = value
 	}
 	return params, v
 }

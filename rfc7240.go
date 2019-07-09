@@ -41,12 +41,10 @@ func AddPrefer(h http.Header, prefs map[string]Pref) {
 
 func buildPrefer(prefs map[string]Pref) string {
 	b := &strings.Builder{}
-	first := true
 	for name, pref := range prefs {
-		if !first {
+		if b.Len() > 0 {
 			b.WriteString(", ")
 		}
-		first = false
 		b.WriteString(name)
 		if pref.Value != "" {
 			b.WriteString("=")
