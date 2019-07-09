@@ -13,6 +13,9 @@ type ViaElem struct {
 }
 
 // Via parses the Via header from h (RFC 7230 Section 5.7.1).
+//
+// BUG(vfaronov): Incorrectly parses some extravagant values of received-by
+// that do not occur in practice but are theoretically admitted by RFC 3986.
 func Via(h http.Header) []ViaElem {
 	var elems []ViaElem
 	for v, vs := iterElems("", h["Via"]); vs != nil; v, vs = iterElems(v, vs) {
@@ -22,7 +25,7 @@ func Via(h http.Header) []ViaElem {
 			elem.ReceivedProto = "HTTP/" + elem.ReceivedProto
 		}
 		v = skipWS(v)
-		elem.ReceivedBy, v = consumeItem(v)
+		elem.ReceivedBy, v = consumeAgent(v)
 		v = skipWS(v)
 		if peek(v) == '(' {
 			elem.Comment, v = consumeComment(v)

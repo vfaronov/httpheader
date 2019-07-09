@@ -227,3 +227,20 @@ func writeNullableParams(b *strings.Builder, params map[string]string) {
 		}
 	}
 }
+
+func consumeAgent(v string) (agent, newv string) {
+	// RFC 7230 received-by and RFC 7234 warn-agent. This is tricky because
+	// it can contain commas, semicolons, equal signs (see test cases)
+	// or even be empty, if you read the grammar literally (reg-name may be empty).
+	// The reg-name cases are too much for me right now, but it's easy to handle
+	// the IP-Literal case: it's delimited by brackets and never contains brackets.
+	if peek(v) == '[' {
+		if end := strings.IndexByte(v, ']'); end >= 0 {
+			var maybePort string
+			maybePort, newv = consumeItem(v[end+1:])
+			agent = v[:end+1+len(maybePort)]
+			return
+		}
+	}
+	return consumeItem(v)
+}

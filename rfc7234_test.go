@@ -38,8 +38,8 @@ func TestWarning(t *testing.T) {
 		},
 		{
 			// See RFC 6874.
-			http.Header{"Warning": {`299 [fe80::a%25en1]:80 "good"`}},
-			[]WarningElem{{299, "[fe80::a%25en1]:80", "good", time.Time{}}},
+			http.Header{"Warning": {`299 [fe80::a%25en1] "good"`}},
+			[]WarningElem{{299, "[fe80::a%25en1]", "good", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": {`199 - "good", 299 - "better"`}},
@@ -105,6 +105,29 @@ func TestWarning(t *testing.T) {
 		{
 			http.Header{"Warning": {`299 - "with \"escaped\""`}},
 			[]WarningElem{{299, "-", `with "escaped"`, time.Time{}}},
+		},
+		{
+			// This is a valid warn-agent, per uri-host -> IPvFuture.
+			http.Header{"Warning": {
+				`214 [v9.a51c00de,route=51]:8080 "converted from 5D media!"`,
+			}},
+			[]WarningElem{
+				{
+					214,
+					"[v9.a51c00de,route=51]:8080",
+					"converted from 5D media!",
+					time.Time{},
+				},
+			},
+		},
+		{
+			// This is a valid warn-agent, per uri-host -> reg-name -> sub-delims,
+			// but we currently don't parse it. This is a documented bug.
+			http.Header{"Warning": {`214 funky,reg-name "WAT"`}},
+			[]WarningElem{
+				{214, "funky", "", time.Time{}},
+				{0, `"WAT"`, "", time.Time{}},
+			},
 		},
 
 		// Invalid headers.

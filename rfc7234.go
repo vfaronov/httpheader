@@ -17,6 +17,9 @@ type WarningElem struct {
 }
 
 // Warning parses the Warning header from h (RFC 7234 Section 5.5).
+//
+// BUG(vfaronov): Incorrectly parses some extravagant values of warn-agent
+// that do not occur in practice but are theoretically admitted by RFC 3986.
 func Warning(h http.Header) []WarningElem {
 	var elems []WarningElem
 	for v, vs := iterElems("", h["Warning"]); vs != nil; v, vs = iterElems(v, vs) {
@@ -25,7 +28,7 @@ func Warning(h http.Header) []WarningElem {
 		codeStr, v = consumeItem(v)
 		elem.Code, _ = strconv.Atoi(codeStr)
 		v = skipWS(v)
-		elem.Agent, v = consumeItem(v)
+		elem.Agent, v = consumeAgent(v)
 		v = skipWS(v)
 		elem.Text, v = consumeQuoted(v)
 		v = skipWS(v)

@@ -96,6 +96,28 @@ func TestVia(t *testing.T) {
 			http.Header{"Via": {`1.1 foo (\strange quoting)`}},
 			[]ViaElem{{"HTTP/1.1", "foo", "strange quoting"}},
 		},
+		{
+			// This is a valid received-by, per uri-host -> IPvFuture.
+			http.Header{"Via": {
+				`1.1 [v9.a51c00de,route=51]:8080 (IPv9 Powered), 1.1 example.net`,
+			}},
+			[]ViaElem{
+				{"HTTP/1.1", "[v9.a51c00de,route=51]:8080", "IPv9 Powered"},
+				{"HTTP/1.1", "example.net", ""},
+			},
+		},
+		{
+			// This is a valid received-by, per uri-host -> reg-name -> sub-delims,
+			// but we currently don't parse it. This is a documented bug.
+			http.Header{"Via": {
+				`1.1 funky,reg-name, 1.1 example.net`,
+			}},
+			[]ViaElem{
+				{"HTTP/1.1", "funky", ""},
+				{"HTTP/reg-name", "", ""},
+				{"HTTP/1.1", "example.net", ""},
+			},
+		},
 
 		// Invalid headers.
 		// Precise outputs on them are not a guaranteed part of the API.
