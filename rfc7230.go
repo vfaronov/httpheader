@@ -17,12 +17,12 @@ func Via(h http.Header) []ViaElem {
 	var elems []ViaElem
 	for v, vs := iterElems("", h["Via"]); vs != nil; v, vs = iterElems(v, vs) {
 		var elem ViaElem
-		elem.ReceivedProto, v = consumeItem(v, 0)
+		elem.ReceivedProto, v = consumeItem(v)
 		if strings.IndexByte(elem.ReceivedProto, '/') == -1 {
 			elem.ReceivedProto = "HTTP/" + elem.ReceivedProto
 		}
 		v = skipWS(v)
-		elem.ReceivedBy, v = consumeItem(v, 0)
+		elem.ReceivedBy, v = consumeItem(v)
 		v = skipWS(v)
 		if peek(v) == '(' {
 			elem.Comment, v = consumeComment(v)

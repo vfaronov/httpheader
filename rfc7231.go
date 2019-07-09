@@ -16,7 +16,7 @@ func Allow(h http.Header) []string {
 	var methods []string
 	for v, vs := iterElems("", h["Allow"]); vs != nil; v, vs = iterElems(v, vs) {
 		var method string
-		method, v = consumeItem(v, 0)
+		method, v = consumeItem(v)
 		methods = append(methods, method)
 	}
 	if methods == nil && h["Allow"] != nil {
@@ -38,7 +38,7 @@ func Vary(h http.Header) map[string]bool {
 	var names map[string]bool
 	for v, vs := iterElems("", h["Vary"]); vs != nil; v, vs = iterElems(v, vs) {
 		var name string
-		name, v = consumeItem(v, 0)
+		name, v = consumeItem(v)
 		name = http.CanonicalHeaderKey(name)
 		if names == nil {
 			names = make(map[string]bool)
@@ -105,14 +105,15 @@ func parseProducts(v string) []Product {
 	var products []Product
 	for v != "" {
 		var product Product
-		product.Name, v = consumeItem(v, '/')
+		product.Name, v = consumeItem(v)
 		if product.Name == "" {
 			// Avoid infinite loop.
 			v = v[1:]
 			continue
 		}
-		if peek(v) == '/' {
-			product.Version, v = consumeItem(v[1:], 0)
+		if sep := strings.IndexByte(product.Name, '/'); sep >= 0 {
+			product.Version = product.Name[sep+1:]
+			product.Name = product.Name[:sep]
 		}
 		// Collect all comments for this product.
 		for {
@@ -222,7 +223,7 @@ func Accept(h http.Header) []AcceptElem {
 	var elems []AcceptElem
 	for v, vs := iterElems("", h["Accept"]); vs != nil; v, vs = iterElems(v, vs) {
 		elem := AcceptElem{Q: 1}
-		elem.Type, v = consumeItem(v, 0)
+		elem.Type, v = consumeItem(v)
 		elem.Type = strings.ToLower(elem.Type)
 		afterQ := false
 		for {
