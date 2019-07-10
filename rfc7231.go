@@ -78,7 +78,9 @@ func buildVary(names map[string]bool) string {
 // If multiple comments are associated with a product, they are concatenated
 // with a "; " separator.
 type Product struct {
-	Name, Version, Comment string
+	Name    string
+	Version string
+	Comment string
 }
 
 // UserAgent parses the User-Agent header from h (RFC 7231 Section 5.5.3).

@@ -7,6 +7,8 @@ import (
 )
 
 // A LinkElem represents a Web link (RFC 8288).
+// Standard target attributes are stored in the corresponding fields;
+// any extension attributes are stored in Ext.
 type LinkElem struct {
 	Anchor   *url.URL // usually nil
 	Rel      string   // normalized to lowercase
@@ -26,9 +28,6 @@ type LinkElem struct {
 // is not nil, which indicates a link pointing "from" another resource
 // (not the one that supplied the Link header). However, such links may be useful
 // for some applications.
-//
-// Standard target attributes are stored in the corresponding fields of LinkElem.
-// Any extension attributes are stored in the Ext map.
 //
 // Any 'title*' parameter is decoded from RFC 8187 encoding, and overrides 'title'.
 // Similarly for any extension attribute whose name ends in an asterisk.

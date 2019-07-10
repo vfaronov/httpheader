@@ -45,7 +45,7 @@ func writeExtValue(b *strings.Builder, s string) {
 // url.PathEscape doesn't escape "=", and url.QueryEscape escapes " " into "+"
 // (which is a valid attr-char on its own), so we have to roll our own
 // percent-encoding.
-var pctEncoding = make(map[byte]string)
+var pctEncoding [256]string
 
 func init() {
 	// Precompute percent-encoding.
