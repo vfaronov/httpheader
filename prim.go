@@ -58,17 +58,22 @@ func skipWS(v string) string {
 	return v
 }
 
-func consumeQuoted(v string) (text, newv string) {
-	return consumeDelimited(v, '"', '"')
+func consumeQuoted(v string, strict bool) (text, newv string, ok bool) {
+	return consumeDelimited(v, '"', '"', strict)
 }
 
-func consumeComment(v string) (text, newv string) {
-	return consumeDelimited(v, '(', ')')
+func consumeComment(v string, strict bool) (text, newv string, ok bool) {
+	return consumeDelimited(v, '(', ')', strict)
 }
 
-func consumeDelimited(v string, opener, closer byte) (text, newv string) {
+func consumeDelimited(
+	v string,
+	opener, closer byte,
+	strict bool,
+) (text, newv string, ok bool) {
+	orig := v
 	if peek(v) != opener {
-		return "", v
+		return "", v, false
 	}
 	v = v[1:]
 
@@ -81,7 +86,7 @@ func consumeDelimited(v string, opener, closer byte) (text, newv string) {
 		case closer:
 			nesting--
 			if nesting == 0 {
-				return v[:i], v[i+1:]
+				return v[:i], v[i+1:], true
 			}
 		case opener:
 			nesting++
@@ -89,7 +94,11 @@ func consumeDelimited(v string, opener, closer byte) (text, newv string) {
 			goto buffered
 		}
 	}
-	return v, "" // unterminated string
+	// Unterminated string.
+	if strict {
+		return "", orig, false
+	}
+	return v, "", false
 
 buffered:
 	// But once we have encountered a quoted pair,
@@ -105,7 +114,7 @@ buffered:
 		case v[i] == closer:
 			nesting--
 			if nesting == 0 {
-				return string(buf), v[i+1:]
+				return string(buf), v[i+1:], true
 			}
 			buf = append(buf, v[i])
 		case v[i] == opener:
@@ -117,7 +126,11 @@ buffered:
 			buf = append(buf, v[i])
 		}
 	}
-	return string(buf), "" // unterminated string
+	// Unterminated string.
+	if strict {
+		return "", orig, false
+	}
+	return string(buf), "", false
 }
 
 func writeQuoted(b *strings.Builder, s string) {
@@ -141,7 +154,8 @@ func writeDelimited(b *strings.Builder, s string, opener, closer byte) {
 
 func consumeItemOrQuoted(v string) (text, newv string) {
 	if peek(v) == '"' {
-		return consumeQuoted(v)
+		text, newv, _ = consumeQuoted(v, false)
+		return
 	}
 	return consumeItem(v)
 }
@@ -205,11 +219,20 @@ func consumeParam(v string) (name, value, newv string) {
 func writeParameterized(b *strings.Builder, item string, params map[string]string) {
 	b.WriteString(item)
 	for name, value := range params {
-		b.WriteString(";")
-		b.WriteString(name)
-		b.WriteString("=")
-		writeTokenOrQuoted(b, value)
+		writeParam(b, true, name, value)
 	}
+}
+
+func writeParam(b *strings.Builder, wrote bool, name, value string) bool {
+	// The wrote flag enables control over when to output the first semicolon.
+	// See buildForwarded for example of its usage.
+	if wrote {
+		b.WriteString(";")
+	}
+	b.WriteString(name)
+	b.WriteString("=")
+	writeTokenOrQuoted(b, value)
+	return true
 }
 
 func writeNullableParams(b *strings.Builder, params map[string]string) {
