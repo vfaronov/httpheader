@@ -1,11 +1,6 @@
 package httpheader
 
-import (
-	"regexp"
-	"strings"
-)
-
-var tokenExp = regexp.MustCompile("^[-!#$%&'*+.^_`|~0-9a-zA-Z]+$")
+import "strings"
 
 func peek(v string) byte {
 	if v == "" {
@@ -152,7 +147,7 @@ func consumeItemOrQuoted(v string) (text, newv string) {
 }
 
 func writeTokenOrQuoted(b *strings.Builder, s string) {
-	if tokenExp.MatchString(s) {
+	if isToken(s) {
 		b.WriteString(s)
 	} else {
 		writeQuoted(b, s)
@@ -183,6 +178,11 @@ func consumeParams(v string) (params map[string]string, newv string) {
 		}
 		var name, value string
 		name, value, v = consumeParam(v)
+		// Ignore duplicate parameters. This is strictly required for RFC 8288's
+		// standard parameters, but is reasonable behavior in general.
+		if _, ok := params[name]; ok {
+			continue
+		}
 		if params == nil {
 			params = make(map[string]string)
 		}

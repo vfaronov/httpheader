@@ -1,11 +1,12 @@
 package httpheader
 
 import (
+	"encoding/base64"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -123,10 +124,12 @@ func mkUTF8(r *rand.Rand) interface{} {
 
 func mkToken(r *rand.Rand) interface{} {
 	const (
-		punctuation = "-!#$%&'*+.^_`|~"
-		digits      = "0123456789"
-		letters     = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		chars       = punctuation + digits + letters + letters + letters
+		punct  = "-!#$%&'*+.^_`|~"
+		digits = "0123456789"
+		// Restrict to lowercase to survive canonicalization.
+		letters = "abcdefghijklmnopqrstuvwxyz"
+		// Biased towards letters for readability.
+		chars = punct + digits + letters + letters + letters + letters + letters
 	)
 	b := make([]byte, 1+r.Intn(5))
 	for i := range b {
@@ -142,9 +145,22 @@ func mkMaybeToken(r *rand.Rand) interface{} {
 	return mkToken(r)
 }
 
-func mkLowerToken(r *rand.Rand) interface{} {
-	token := mkToken(r).(string)
-	return strings.ToLower(token)
+func mkVariform(r *rand.Rand) interface{} {
+	switch r.Intn(4) {
+	case 1:
+		// representable as token or quoted-string or ext-value
+		return mkToken(r)
+	case 2:
+		// representable as quoted-string
+		// potentially not representable as ext-value (which requires UTF-8)
+		return mkString(r)
+	case 3:
+		// representable as ext-value
+		// potentially not representable as quoted-string
+		return mkUTF8(r)
+	default:
+		return ""
+	}
 }
 
 func mkHeaderName(r *rand.Rand) interface{} {
@@ -169,6 +185,25 @@ func mkQValue(r *rand.Rand) interface{} {
 	// Truncate to 3 digits after decimal point.
 	q, _ = strconv.ParseFloat(strconv.FormatFloat(q, 'f', 3, 64), 64)
 	return float32(q)
+}
+
+func mkURL(r *rand.Rand) interface{} {
+	b := make([]byte, 32)
+	r.Read(b)
+	s := base64.URLEncoding.EncodeToString(b)
+	if rand.Intn(5) == 0 {
+		return &url.URL{
+			Scheme: "urn",
+			Opaque: s[0:30],
+		}
+	}
+	return &url.URL{
+		Scheme:   "http",
+		Host:     s[4:10],
+		Path:     "/" + s[10:10+rand.Intn(5)],
+		RawQuery: s[15 : 15+rand.Intn(5)],
+		Fragment: s[20 : 20+rand.Intn(5)],
+	}
 }
 
 func mkSlice(r *rand.Rand, value func(*rand.Rand) interface{}) interface{} {
@@ -198,7 +233,7 @@ func mkMap(r *rand.Rand, key, value func(*rand.Rand) interface{}) interface{} {
 }
 
 func mkParams(r *rand.Rand) interface{} {
-	return mkMap(r, mkLowerToken, mkString).(map[string]string)
+	return mkMap(r, mkToken, mkString).(map[string]string)
 }
 
 func mkExtParams(r *rand.Rand) interface{} {

@@ -207,7 +207,7 @@ func TestPreferFuzz(t *testing.T) {
 
 func TestPreferRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetPrefer, Prefer, func(r *rand.Rand) interface{} {
-		return mkMap(r, mkLowerToken, func(r *rand.Rand) interface{} {
+		return mkMap(r, mkToken, func(r *rand.Rand) interface{} {
 			return Pref{
 				Value:  mkString(r).(string),
 				Params: mkParams(r).(map[string]string),

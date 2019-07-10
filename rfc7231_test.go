@@ -571,7 +571,7 @@ func TestContentTypeFuzz(t *testing.T) {
 func TestContentTypeRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetContentType, ContentType,
 		func(r *rand.Rand) interface{} {
-			return mkLowerToken(r).(string) + "/" + mkLowerToken(r).(string)
+			return mkToken(r).(string) + "/" + mkToken(r).(string)
 		},
 		mkParams,
 	)
@@ -1024,7 +1024,7 @@ func TestAcceptRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetAccept, Accept, func(r *rand.Rand) interface{} {
 		return mkSlice(r, func(r *rand.Rand) interface{} {
 			elem := AcceptElem{
-				Type:   mkLowerToken(r).(string) + "/" + mkLowerToken(r).(string),
+				Type:   mkToken(r).(string) + "/" + mkToken(r).(string),
 				Q:      mkQValue(r).(float32),
 				Params: mkParams(r).(map[string]string),
 				Ext:    mkParams(r).(map[string]string),

@@ -200,5 +200,5 @@ func TestContentDispositionFuzz(t *testing.T) {
 
 func TestContentDispositionRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetContentDisposition, ContentDisposition,
-		mkLowerToken, mkExtParams)
+		mkToken, mkExtParams)
 }
