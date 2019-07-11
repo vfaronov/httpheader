@@ -223,6 +223,20 @@ func writeParameterized(b *strings.Builder, item string, params map[string]strin
 	}
 }
 
+func writeDirective(b *strings.Builder, wrote bool, name, value string) bool {
+	// The wrote flag controls when to output the first comma.
+	// See SetCacheControl for example of its usage.
+	if wrote {
+		b.WriteString(", ")
+	}
+	b.WriteString(name)
+	if value != "" {
+		b.WriteString("=")
+		writeTokenOrQuoted(b, value)
+	}
+	return true
+}
+
 func writeParam(b *strings.Builder, wrote bool, name, value string) bool {
 	// The wrote flag controls when to output the first semicolon.
 	// See buildForwarded for example of its usage.

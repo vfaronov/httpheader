@@ -41,15 +41,9 @@ func AddPrefer(h http.Header, prefs map[string]Pref) {
 
 func buildPrefer(prefs map[string]Pref) string {
 	b := &strings.Builder{}
+	var wrote bool
 	for name, pref := range prefs {
-		if b.Len() > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(name)
-		if pref.Value != "" {
-			b.WriteString("=")
-			writeTokenOrQuoted(b, pref.Value)
-		}
+		wrote = writeDirective(b, wrote, name, pref.Value)
 		writeNullableParams(b, pref.Params)
 	}
 	return b.String()

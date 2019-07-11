@@ -199,3 +199,218 @@ func TestWarningRoundTrip(t *testing.T) {
 		})
 	})
 }
+
+func ExampleSetCacheControl() {
+	header := http.Header{}
+	SetCacheControl(header, CacheDirectives{
+		Public: true,
+		MaxAge: Just(600),
+		Ext:    map[string]string{"priority": "5"},
+	})
+	fmt.Println(header)
+	// Output: map[Cache-Control:[public, max-age=600, priority=5]]
+}
+
+func TestCacheControl(t *testing.T) {
+	tests := []struct {
+		header http.Header
+		result CacheDirectives
+	}{
+		// Valid headers.
+		{
+			http.Header{"Cache-Control": {", no-store, no-transform"}},
+			CacheDirectives{NoStore: true, NoTransform: true},
+		},
+		{
+			http.Header{"Cache-Control": {"Only-If-Cached"}},
+			CacheDirectives{OnlyIfCached: true},
+		},
+		{
+			http.Header{"Cache-Control": {
+				"foo=bar,,public,",
+				"must-revalidate,proxy-revalidate",
+			}},
+			CacheDirectives{
+				Public:          true,
+				MustRevalidate:  true,
+				ProxyRevalidate: true,
+				Ext:             map[string]string{"foo": "bar"},
+			},
+		},
+		{
+			http.Header{"Cache-Control": {"Immutable, Max-Age=3600"}},
+			CacheDirectives{Immutable: true, MaxAge: Just(3600)},
+		},
+		{
+			http.Header{"Cache-Control": {"private,no-cache"}},
+			CacheDirectives{Private: true, NoCache: true},
+		},
+		{
+			http.Header{"Cache-Control": {`private="",no-cache=""`}},
+			CacheDirectives{Private: true, NoCache: true},
+		},
+		{
+			http.Header{"Cache-Control": {
+				`private=set-cookie`,
+				`no-cache="authorization-info, warning, "`,
+			}},
+			CacheDirectives{
+				PrivateHeaders: []string{"Set-Cookie"},
+				NoCacheHeaders: []string{"Authorization-Info", "Warning"},
+			},
+		},
+		{
+			http.Header{"Cache-Control": {"max-age=0, s-maxage=0"}},
+			CacheDirectives{MaxAge: Just(0), SMaxage: Just(0)},
+		},
+		{
+			http.Header{"Cache-Control": {"only-if-cached,max-stale"}},
+			CacheDirectives{OnlyIfCached: true, MaxStale: -1},
+		},
+		{
+			http.Header{"Cache-Control": {`only-if-cached,max-stale="3600"`}},
+			CacheDirectives{OnlyIfCached: true, MaxStale: 3600},
+		},
+		{
+			http.Header{"Cache-Control": {
+				`Min-Fresh=300, Urgent, Foo="bar, baz"`,
+			}},
+			CacheDirectives{
+				MinFresh: 300,
+				Ext: map[string]string{
+					"urgent": "",
+					"foo":    "bar, baz",
+				},
+			},
+		},
+		{
+			http.Header{"Cache-Control": {
+				", public, max-age=86400, stale-while-revalidate=300",
+				`, stale-if-error="180"`,
+			}},
+			CacheDirectives{
+				Public:               true,
+				MaxAge:               Just(86400),
+				StaleWhileRevalidate: 300,
+				StaleIfError:         180,
+			},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Cache-Control": {`no-store=foo, public="bar"`}},
+			CacheDirectives{NoStore: true, Public: true},
+		},
+		{
+			http.Header{"Cache-Control": {"max-age=foo,min-fresh=bar"}},
+			CacheDirectives{},
+		},
+		{
+			http.Header{"Cache-Control": {"max-age,min-fresh"}},
+			CacheDirectives{},
+		},
+		{
+			http.Header{"Cache-Control": {"max-age=60.098"}},
+			CacheDirectives{},
+		},
+		{
+			http.Header{"Cache-Control": {"max-age=60=300, private"}},
+			CacheDirectives{MaxAge: Just(60), Private: true},
+		},
+		{
+			http.Header{"Cache-Control": {"stale-if-error = 60"}},
+			CacheDirectives{StaleIfError: 60},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			checkParse(t, test.header, test.result, CacheControl(test.header))
+		})
+	}
+}
+
+func TestSetCacheControl(t *testing.T) {
+	tests := []struct {
+		input  CacheDirectives
+		result http.Header
+	}{
+		{
+			CacheDirectives{NoStore: true, NoTransform: true, NoCache: true},
+			http.Header{"Cache-Control": {"no-store, no-transform, no-cache"}},
+		},
+		{
+			CacheDirectives{OnlyIfCached: true, MaxStale: 900},
+			http.Header{"Cache-Control": {"only-if-cached, max-stale=900"}},
+		},
+		{
+			CacheDirectives{MustRevalidate: true, ProxyRevalidate: true},
+			http.Header{"Cache-Control": {"must-revalidate, proxy-revalidate"}},
+		},
+		{
+			CacheDirectives{Public: true, Immutable: true, MaxAge: Just(86400)},
+			http.Header{"Cache-Control": {"public, immutable, max-age=86400"}},
+		},
+		{
+			// "A sender SHOULD NOT generate the token form"
+			CacheDirectives{NoCacheHeaders: []string{"Set-Cookie"}},
+			http.Header{"Cache-Control": {`no-cache="Set-Cookie"`}},
+		},
+		{
+			// "A sender SHOULD NOT generate the token form"
+			CacheDirectives{PrivateHeaders: []string{"Set-Cookie"}},
+			http.Header{"Cache-Control": {`private="Set-Cookie"`}},
+		},
+		{
+			CacheDirectives{PrivateHeaders: []string{"Set-Cookie", "Request-ID"}},
+			http.Header{"Cache-Control": {`private="Set-Cookie,Request-ID"`}},
+		},
+		{
+			CacheDirectives{Private: true, StaleWhileRevalidate: 300},
+			http.Header{"Cache-Control": {"private, stale-while-revalidate=300"}},
+		},
+		{
+			CacheDirectives{MaxStale: -1},
+			http.Header{"Cache-Control": {"max-stale"}},
+		},
+		{
+			CacheDirectives{MinFresh: 900, Ext: map[string]string{"Qux": ""}},
+			http.Header{"Cache-Control": {"min-fresh=900, Qux"}},
+		},
+		{
+			CacheDirectives{
+				StaleIfError: 1800,
+				Ext:          map[string]string{"bar": "baz, qux"},
+			},
+			http.Header{"Cache-Control": {`stale-if-error=1800, bar="baz, qux"`}},
+		},
+		{
+			CacheDirectives{
+				SMaxage: Just(300),
+				Ext:     map[string]string{"priority": "40"},
+			},
+			http.Header{"Cache-Control": {"s-maxage=300, priority=40"}},
+		},
+		{
+			CacheDirectives{
+				NoCache:        true,
+				NoCacheHeaders: []string{"Set-Cookie"},
+				Private:        true,
+				PrivateHeaders: []string{"Authorization-Info"},
+			},
+			http.Header{"Cache-Control": {"private, no-cache"}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			header := http.Header{}
+			SetCacheControl(header, test.input)
+			checkSerialize(t, test.input, test.result, header)
+		})
+	}
+}
+
+func TestCacheControlFuzz(t *testing.T) {
+	checkFuzz(t, "Cache-Control", CacheControl, SetCacheControl)
+}
