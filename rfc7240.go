@@ -8,11 +8,11 @@ import (
 // A Pref contains a preference's value and any associated parameters (RFC 7240).
 type Pref struct {
 	Value  string
-	Params map[string]string // keys are canonicalized to lowercase
+	Params map[string]string // keys lowercased
 }
 
 // Prefer parses the Prefer header from h (RFC 7240 with errata),
-// returning a map where keys are preference names, canonicalized to lowercase.
+// returning a map where keys are lowercase preference names.
 func Prefer(h http.Header) map[string]Pref {
 	var r map[string]Pref
 	for v, vs := iterElems("", h["Prefer"]); vs != nil; v, vs = iterElems(v, vs) {

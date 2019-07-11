@@ -18,7 +18,7 @@ type WarningElem struct {
 
 // Warning parses the Warning header from h (RFC 7234 Section 5.5).
 //
-// BUG(vfaronov): Incorrectly parses some extravagant values of warn-agent
+// BUG(vfaronov): Incorrectly parses some extravagant values of uri-host
 // that do not occur in practice but are theoretically admitted by RFC 3986.
 func Warning(h http.Header) []WarningElem {
 	var elems []WarningElem

@@ -6,8 +6,8 @@ import (
 )
 
 // ContentDisposition parses the Content-Disposition header from h (RFC 6266),
-// returning the disposition type, canonicalized to lowercase,
-// and a map of disposition parameters, where keys are also lowercased.
+// returning the disposition type and a map of disposition parameters.
+// The type and the map keys (but not values) are lowercased.
 // Parameters whose names end in an asterisk, such as 'filename*',
 // are automatically decoded from RFC 8187 encoding, but their UTF-8 is not
 // validated.

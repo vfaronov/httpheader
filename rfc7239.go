@@ -11,9 +11,8 @@ import (
 //
 // Any valid elements at the end of the header are guaranteed to be parsed, even if
 // they are preceded by malformed elements. This ensures that any information
-// appended by trusted gateways (closer to the server in request chain) can be
-// recovered regardless of what was received from the outside. However, such trust
-// must itself be established by means that are out of scope for this package.
+// appended by a trusted gateway is recovered regardless of what was received from
+// the (untrusted) client. Establishing trust is outside the scope of this package.
 func Forwarded(h http.Header) []ForwardedElem {
 	var elems []ForwardedElem
 	for v, vs := iterElems("", h["Forwarded"]); vs != nil; v, vs = iterElems(v, vs) {
@@ -106,7 +105,7 @@ type ForwardedElem struct {
 	By    string
 	For   string
 	Host  string
-	Proto string            // canonicalized to lowercase
+	Proto string            // lowercased
 	Ext   map[string]string // keys lowercased
 }
 

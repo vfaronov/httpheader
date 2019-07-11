@@ -195,8 +195,8 @@ func SetRetryAfter(h http.Header, after time.Time) {
 }
 
 // ContentType parses the Content-Type header from h (RFC 7231 Section 3.1.1.5),
-// returning the media type/subtype, canonicalized to lowercase, and any
-// parameters, with their names also lowercased.
+// returning the media type/subtype and any parameters. The type/subtype
+// and parameter names (but not values) are lowercased.
 func ContentType(h http.Header) (mtype string, params map[string]string) {
 	mtype, params, _ = consumeParameterized(h.Get("Content-Type"))
 	return
@@ -212,11 +212,11 @@ func SetContentType(h http.Header, mtype string, params map[string]string) {
 // An AcceptElem represents one element of the Accept header
 // (RFC 7231 Section 5.3.2).
 type AcceptElem struct {
-	Type string  // media range, canonicalized to lowercase
+	Type string  // media range, lowercased
 	Q    float32 // quality value
-	// All map keys are canonicalized to lowercase.
-	Params map[string]string // media type parameters
-	Ext    map[string]string // extension parameters
+	// All map keys are lowercased.
+	Params map[string]string // media type parameters (before q)
+	Ext    map[string]string // extension parameters (after q)
 }
 
 // Accept parses the Accept header from h (RFC 7231 Section 5.3.2).
@@ -240,6 +240,7 @@ func Accept(h http.Header) []AcceptElem {
 			}
 			var name, value string
 			name, value, v = consumeParam(v)
+			// 'q' separates media type parameters from extension parameters.
 			switch {
 			case name == "q":
 				qvalue, _ := strconv.ParseFloat(value, 32)
@@ -290,11 +291,11 @@ func SetAccept(h http.Header, elems []AcceptElem) {
 // not considered. If nothing matches mediaType, a zero AcceptElem is returned.
 func MatchAccept(accept []AcceptElem, mediaType string) AcceptElem {
 	mediaType = strings.ToLower(mediaType)
-	typePrefix := mediaType
+	prefix := mediaType
 	if pos := strings.IndexByte(mediaType, '/'); pos > 0 {
-		typePrefix = mediaType[:pos+1] // "text/plain" -> "text/"
+		prefix = mediaType[:pos+1] // "text/plain" -> "text/"
 	}
-	bestElem, bestPrecedence := AcceptElem{}, 0
+	best, bestPrecedence := AcceptElem{}, 0
 	for _, elem := range accept {
 		if len(elem.Params) > 0 {
 			continue
@@ -303,14 +304,14 @@ func MatchAccept(accept []AcceptElem, mediaType string) AcceptElem {
 		switch {
 		case elem.Type == mediaType:
 			precedence = 3
-		case strings.HasPrefix(elem.Type, typePrefix) && strings.HasSuffix(elem.Type, "/*"):
+		case strings.HasPrefix(elem.Type, prefix) && strings.HasSuffix(elem.Type, "/*"):
 			precedence = 2
 		case elem.Type == "*/*":
 			precedence = 1
 		}
 		if precedence > bestPrecedence {
-			bestElem, bestPrecedence = elem, precedence
+			best, bestPrecedence = elem, precedence
 		}
 	}
-	return bestElem
+	return best
 }

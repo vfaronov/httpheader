@@ -18,9 +18,6 @@ func ExampleLink() {
 	}}
 	links := Link(header, base)
 	for _, link := range links {
-		if link.Anchor != nil {
-			continue
-		}
 		fmt.Printf("%-5s %-35s %q\n", link.Rel, link.Target, link.Title)
 	}
 	// Output: next  https://api.example/articles/124    "Witaj świecie!"

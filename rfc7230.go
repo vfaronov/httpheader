@@ -14,7 +14,7 @@ type ViaElem struct {
 
 // Via parses the Via header from h (RFC 7230 Section 5.7.1).
 //
-// BUG(vfaronov): Incorrectly parses some extravagant values of received-by
+// BUG(vfaronov): Incorrectly parses some extravagant values of uri-host
 // that do not occur in practice but are theoretically admitted by RFC 3986.
 func Via(h http.Header) []ViaElem {
 	var elems []ViaElem

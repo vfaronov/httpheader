@@ -11,11 +11,11 @@ import (
 // any extension attributes are stored in Ext.
 type LinkElem struct {
 	Anchor   *url.URL // usually nil
-	Rel      string   // normalized to lowercase
+	Rel      string   // lowercased
 	Target   *url.URL // always non-nil
 	Title    string
-	Type     string // normalized to lowercase
-	HrefLang string // normalized to lowercase
+	Type     string // lowercased
+	HrefLang string // lowercased
 	Media    string
 	Ext      map[string]string // usually nil; keys lowercased
 }
@@ -23,11 +23,6 @@ type LinkElem struct {
 // Link parses the Link header from h (RFC 8288), resolving any relative Target
 // and Anchor URLs against base, which is the URL that h was obtained from
 // (http.Response's Request.URL).
-//
-// Most callers should check and discard any returned LinkElem whose Anchor
-// is not nil, which indicates a link pointing "from" another resource
-// (not the one that supplied the Link header). However, such links may be useful
-// for some applications.
 //
 // Any 'title*' parameter is decoded from RFC 8187 encoding, and overrides 'title'.
 // Similarly for any extension attribute whose name ends in an asterisk.
@@ -138,8 +133,7 @@ LinksLoop:
 //
 // The Title of each LinkElem, if non-empty, is serialized into a 'title'
 // parameter in quoted-string form, or a 'title*' parameter in RFC 8187 encoding,
-// or both, depending on what characters it contains, so as to maximize
-// the chances of it being parsed by recipients. Title should be valid UTF-8.
+// or both, depending on what characters it contains. Title should be valid UTF-8.
 //
 // Similarly, if Ext contains a 'qux' or 'qux*' key, it will be serialized into
 // a 'qux' and/or 'qux*' parameter depending on its contents; the asterisk

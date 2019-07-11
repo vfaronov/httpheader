@@ -103,8 +103,8 @@ func consumeDelimited(
 buffered:
 	// But once we have encountered a quoted pair,
 	// we have to unquote into a buffer.
-	buf := make([]byte, i, len(v))
-	copy(buf, v[:i])
+	buf := make([]byte, i)
+	copy(buf, v)
 	quoted := false
 	for ; i < len(v); i++ {
 		switch {
@@ -224,7 +224,7 @@ func writeParameterized(b *strings.Builder, item string, params map[string]strin
 }
 
 func writeParam(b *strings.Builder, wrote bool, name, value string) bool {
-	// The wrote flag enables control over when to output the first semicolon.
+	// The wrote flag controls when to output the first semicolon.
 	// See buildForwarded for example of its usage.
 	if wrote {
 		b.WriteString(";")
