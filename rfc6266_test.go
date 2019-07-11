@@ -189,7 +189,7 @@ func TestSetContentDisposition(t *testing.T) {
 			input := []interface{}{test.dtype, test.params}
 			header := http.Header{}
 			SetContentDisposition(header, test.dtype, test.params)
-			checkSerialize(t, input, test.result, header)
+			checkGenerate(t, input, test.result, header)
 		})
 	}
 }
@@ -200,5 +200,10 @@ func TestContentDispositionFuzz(t *testing.T) {
 
 func TestContentDispositionRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetContentDisposition, ContentDisposition,
-		mkToken, mkExtParams)
+		"lower token",
+		map[string]string{
+			"lower token":        "quotable | empty",
+			"lower token plus *": "quotable | UTF-8 | empty",
+		},
+	)
 }

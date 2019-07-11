@@ -197,7 +197,7 @@ func TestSetForwarded(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			header := http.Header{}
 			SetForwarded(header, test.input)
-			checkSerialize(t, test.input, test.result, header)
+			checkGenerate(t, test.input, test.result, header)
 		})
 	}
 }
@@ -207,17 +207,15 @@ func TestForwardedFuzz(t *testing.T) {
 }
 
 func TestForwardedRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetForwarded, Forwarded, func(r *rand.Rand) interface{} {
-		return mkSlice(r, func(r *rand.Rand) interface{} {
-			return ForwardedElem{
-				For:   mkString(r).(string),
-				By:    mkString(r).(string),
-				Host:  mkString(r).(string),
-				Proto: mkMaybeToken(r).(string),
-				Ext:   mkMap(r, mkToken, mkString).(map[string]string),
-			}
-		})
-	})
+	checkRoundTrip(t, SetForwarded, Forwarded,
+		[]ForwardedElem{{
+			For:   "quotable",
+			By:    "quotable | empty",
+			Host:  "quotable | empty",
+			Proto: "lower quotable | empty",
+			Ext:   map[string]string{"lower token": "quotable | empty"},
+		}},
+	)
 }
 
 func TestForwardedRecover(t *testing.T) {

@@ -2,7 +2,6 @@ package httpheader
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"reflect"
 	"testing"
@@ -22,16 +21,6 @@ func ExampleSetAllow() {
 
 func TestAllowFuzz(t *testing.T) {
 	checkFuzz(t, "Allow", Allow, SetAllow)
-}
-
-func TestAllowRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetAllow, Allow, func(r *rand.Rand) interface{} {
-		methods := mkSlice(r, mkToken).([]string)
-		if methods == nil {
-			methods = make([]string, 0)
-		}
-		return methods
-	})
 }
 
 func TestAllow(t *testing.T) {
@@ -162,13 +151,6 @@ func ExampleAddVary() {
 
 func TestVaryFuzz(t *testing.T) {
 	checkFuzz(t, "Vary", Vary, SetVary)
-}
-
-func TestVaryRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetVary, Vary, func(r *rand.Rand) interface{} {
-		return mkMap(r, mkHeaderName,
-			func(r *rand.Rand) interface{} { return true })
-	})
 }
 
 func ExampleUserAgent() {
@@ -330,15 +312,13 @@ func TestServerFuzz(t *testing.T) {
 }
 
 func TestServerRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetServer, Server, func(r *rand.Rand) interface{} {
-		return mkSlice(r, func(r *rand.Rand) interface{} {
-			return Product{
-				Name:    mkToken(r).(string),
-				Version: mkMaybeToken(r).(string),
-				Comment: mkString(r).(string),
-			}
-		})
-	})
+	checkRoundTrip(t, SetServer, Server,
+		[]Product{{
+			Name:    "token",
+			Version: "token | empty",
+			Comment: "quotable | empty",
+		}},
+	)
 }
 
 func ExampleRetryAfter() {
@@ -411,10 +391,6 @@ func TestRetryAfterCurrentTime(t *testing.T) {
 
 func TestRetryAfterFuzz(t *testing.T) {
 	checkFuzz(t, "Retry-After", RetryAfter, SetRetryAfter)
-}
-
-func TestRetryAfterRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetRetryAfter, RetryAfter, mkDate)
 }
 
 func ExampleContentType() {
@@ -570,10 +546,8 @@ func TestContentTypeFuzz(t *testing.T) {
 
 func TestContentTypeRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetContentType, ContentType,
-		func(r *rand.Rand) interface{} {
-			return mkToken(r).(string) + "/" + mkToken(r).(string)
-		},
-		mkParams,
+		"lower token/token",
+		map[string]string{"lower token": "quotable"},
 	)
 }
 
@@ -1011,7 +985,7 @@ func TestSetAccept(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			header := http.Header{}
 			SetAccept(header, test.input)
-			checkSerialize(t, test.input, test.result, header)
+			checkGenerate(t, test.input, test.result, header)
 		})
 	}
 }
@@ -1021,19 +995,14 @@ func TestAcceptFuzz(t *testing.T) {
 }
 
 func TestAcceptRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetAccept, Accept, func(r *rand.Rand) interface{} {
-		return mkSlice(r, func(r *rand.Rand) interface{} {
-			elem := AcceptElem{
-				Type:   mkToken(r).(string) + "/" + mkToken(r).(string),
-				Q:      mkQValue(r).(float32),
-				Params: mkParams(r).(map[string]string),
-				Ext:    mkParams(r).(map[string]string),
-			}
-			delete(elem.Params, "q")
-			delete(elem.Ext, "q")
-			return elem
-		})
-	})
+	checkRoundTrip(t, SetAccept, Accept,
+		[]AcceptElem{{
+			Type:   "lower token/token",
+			Q:      0.999,
+			Params: map[string]string{"lower token without q": "quotable | empty"},
+			Ext:    map[string]string{"lower token without q": "quotable | empty"},
+		}},
+	)
 }
 
 func ExampleMatchAccept() {

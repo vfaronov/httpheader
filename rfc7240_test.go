@@ -2,7 +2,6 @@ package httpheader
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"testing"
 )
@@ -196,7 +195,7 @@ func TestSetPrefer(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			header := http.Header{}
 			SetPrefer(header, test.input)
-			checkSerialize(t, test.input, test.result, header)
+			checkGenerate(t, test.input, test.result, header)
 		})
 	}
 }
@@ -206,12 +205,12 @@ func TestPreferFuzz(t *testing.T) {
 }
 
 func TestPreferRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetPrefer, Prefer, func(r *rand.Rand) interface{} {
-		return mkMap(r, mkToken, func(r *rand.Rand) interface{} {
-			return Pref{
-				Value:  mkString(r).(string),
-				Params: mkParams(r).(map[string]string),
-			}
-		})
-	})
+	checkRoundTrip(t, SetPrefer, Prefer,
+		map[string]Pref{
+			"lower token": {
+				Value:  "quotable | empty",
+				Params: map[string]string{"lower token": "quotable | empty"},
+			},
+		},
+	)
 }

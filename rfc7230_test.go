@@ -2,7 +2,6 @@ package httpheader
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"testing"
 )
@@ -174,13 +173,11 @@ func TestViaFuzz(t *testing.T) {
 }
 
 func TestViaRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetVia, Via, func(r *rand.Rand) interface{} {
-		return mkSlice(r, func(r *rand.Rand) interface{} {
-			return ViaElem{
-				ReceivedProto: mkToken(r).(string) + "/" + mkToken(r).(string),
-				ReceivedBy:    mkToken(r).(string),
-				Comment:       mkString(r).(string),
-			}
-		})
-	})
+	checkRoundTrip(t, SetVia, Via,
+		[]ViaElem{{
+			ReceivedProto: "token/token",
+			ReceivedBy:    "token",
+			Comment:       "quotable | empty",
+		}},
+	)
 }

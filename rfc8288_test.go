@@ -2,7 +2,6 @@ package httpheader
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -580,7 +579,7 @@ func TestSetLink(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			header := http.Header{}
 			SetLink(header, test.input)
-			checkSerialize(t, test.input, test.result, header)
+			checkGenerate(t, test.input, test.result, header)
 		})
 	}
 }
@@ -590,23 +589,20 @@ func TestLinkFuzz(t *testing.T) {
 }
 
 func TestLinkRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetLink, baseLink, func(r *rand.Rand) interface{} {
-		return mkSlice(r, func(r *rand.Rand) interface{} {
-			var link LinkElem
-			if r.Intn(2) == 0 {
-				link.Anchor = mkURL(r).(*url.URL)
-			}
-			link.Rel = mkToken(r).(string)
-			link.Target = mkURL(r).(*url.URL)
-			link.Title = mkVariform(r).(string)
-			if r.Intn(2) == 0 {
-				link.Type = mkToken(r).(string) + "/" + mkToken(r).(string)
-			}
-			link.HrefLang = mkMaybeToken(r).(string)
-			link.Ext = mkMap(r, mkToken, mkVariform).(map[string]string)
-			return link
-		})
-	})
+	checkRoundTrip(t, SetLink, baseLink,
+		[]LinkElem{{
+			Anchor:   &url.URL{},
+			Rel:      "lower token | lower URL",
+			Target:   &url.URL{},
+			Title:    "token | quotable | UTF-8 | empty",
+			Type:     "lower token/token | empty",
+			HrefLang: "lower token | empty",
+			Media:    "token | empty",
+			Ext: map[string]string{
+				"lower token without *": "token | quotable | UTF-8 | empty",
+			},
+		}},
+	)
 }
 
 // Adapt Link to the interface expected by checkFuzz and checkRoundTrip.

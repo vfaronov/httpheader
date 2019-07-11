@@ -2,7 +2,6 @@ package httpheader
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"testing"
 	"time"
@@ -188,16 +187,14 @@ func TestWarningFuzz(t *testing.T) {
 }
 
 func TestWarningRoundTrip(t *testing.T) {
-	checkRoundTrip(t, SetWarning, Warning, func(r *rand.Rand) interface{} {
-		return mkSlice(r, func(r *rand.Rand) interface{} {
-			return WarningElem{
-				Code:  100 + r.Intn(900),
-				Agent: mkToken(r).(string),
-				Text:  mkString(r).(string),
-				Date:  mkMaybeDate(r).(time.Time),
-			}
-		})
-	})
+	checkRoundTrip(t, SetWarning, Warning,
+		[]WarningElem{{
+			Code:  999,
+			Agent: "token",
+			Text:  "quotable | empty",
+			Date:  time.Time{},
+		}},
+	)
 }
 
 func ExampleSetCacheControl() {
@@ -406,7 +403,7 @@ func TestSetCacheControl(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			header := http.Header{}
 			SetCacheControl(header, test.input)
-			checkSerialize(t, test.input, test.result, header)
+			checkGenerate(t, test.input, test.result, header)
 		})
 	}
 }
