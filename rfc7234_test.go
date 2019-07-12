@@ -197,6 +197,17 @@ func TestWarningRoundTrip(t *testing.T) {
 	)
 }
 
+func BenchmarkWarning(b *testing.B) {
+	header := http.Header{"Warning": {
+		`299 api.example.com "This API is deprecated; see docs"`,
+		`214 proxy1.example.net "Tracking pixels removed"`,
+		`112 cache3.example.net "No route to host" "Fri, 12 Jul 2019 17:51:24 GMT", 110 cache3.example.net "Response is stale" "Fri, 12 Jul 2019 17:51:24 GMT"`,
+	}}
+	for i := 0; i < b.N; i++ {
+		Warning(header)
+	}
+}
+
 func ExampleSetCacheControl() {
 	header := http.Header{}
 	SetCacheControl(header, CacheDirectives{
@@ -410,4 +421,14 @@ func TestSetCacheControl(t *testing.T) {
 
 func TestCacheControlFuzz(t *testing.T) {
 	checkFuzz(t, "Cache-Control", CacheControl, SetCacheControl)
+}
+
+func BenchmarkCacheControl(b *testing.B) {
+	header := http.Header{"Cache-Control": {
+		`private="Set-Cookie", max-age=900, s-maxage=600, stale-if-error=30`,
+		`no-transform, must-revalidate`,
+	}}
+	for i := 0; i < b.N; i++ {
+		CacheControl(header)
+	}
 }

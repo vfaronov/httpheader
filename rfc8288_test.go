@@ -605,6 +605,19 @@ func TestLinkRoundTrip(t *testing.T) {
 	)
 }
 
+func BenchmarkLink(b *testing.B) {
+	base := U(testBase)
+	header := http.Header{"Link": {
+		`</chapter/4>; rel="next prefetch", </chapter/2>; rel=prev`,
+		`</chapter/intro>; rel=start; title="Introduction", <../>; rel=up`,
+		`<https://example.com/help>; rel=help; title*=UTF-8'en'Reader%20help`,
+		`</dark.css>; rel="alternate stylesheet"; type="text/css"; media=screen`,
+	}}
+	for i := 0; i < b.N; i++ {
+		Link(header, base)
+	}
+}
+
 // Adapt Link to the interface expected by checkFuzz and checkRoundTrip.
 func baseLink(h http.Header) []LinkElem {
 	return Link(h, U(testBase))

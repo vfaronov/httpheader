@@ -245,6 +245,17 @@ func TestForwardedRecover(t *testing.T) {
 	}
 }
 
+func BenchmarkForwarded(b *testing.B) {
+	header := http.Header{"Forwarded": {
+		`by=_proxyACe430bZq8g8d;for=10.41.132.82;acl="check passed"`,
+		`by="[2001:db8:ae0::55]";for=198.51.100.67;proto=https;host=example.com`,
+		`for="[2001:db8:ae0::55]";proto=http, for="[2001:db8:f6::c3]";proto=http`,
+	}}
+	for i := 0; i < b.N; i++ {
+		Forwarded(header)
+	}
+}
+
 func TestForwardedElemByAddr(t *testing.T) {
 	tests := []struct {
 		value string

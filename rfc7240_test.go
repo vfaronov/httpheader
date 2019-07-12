@@ -214,3 +214,13 @@ func TestPreferRoundTrip(t *testing.T) {
 		},
 	)
 }
+
+func BenchmarkPrefer(b *testing.B) {
+	header := http.Header{"Prefer": {
+		`handling=lenient; ignore-errors="spelling, grammar, offensive-lang"`,
+		`include-parameter="http://vocab.example/foo", wait=10, respond-async`,
+	}}
+	for i := 0; i < b.N; i++ {
+		Prefer(header)
+	}
+}
