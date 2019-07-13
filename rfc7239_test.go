@@ -47,7 +47,7 @@ func ExampleAddForwarded() {
 		For:   "[2001:db8:cafe::17]",
 		Proto: "https",
 	})
-	fmt.Println(header)
+	fmt.Print(header)
 	// Output: map[Forwarded:[for="[2001:db8:cafe::17]";proto=https]]
 }
 
@@ -179,6 +179,10 @@ func TestSetForwarded(t *testing.T) {
 		input  []ForwardedElem
 		result http.Header
 	}{
+		{
+			[]ForwardedElem{},
+			http.Header{},
+		},
 		{
 			[]ForwardedElem{
 				{

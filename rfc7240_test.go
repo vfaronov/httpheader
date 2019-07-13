@@ -142,13 +142,11 @@ func TestPrefer(t *testing.T) {
 func ExampleSetPrefer() {
 	header := http.Header{}
 	SetPrefer(header, map[string]Pref{
-		"wait":          {Value: "10"},
-		"respond-async": {},
-		"foo": {
-			Value:  "bar, baz",
-			Params: map[string]string{"quux": "xyzzy"},
-		},
+		"wait":           {Value: "10"},
+		"respond-async":  {},
+		"check-spelling": {Params: map[string]string{"lang": "en"}},
 	})
+	// Output:
 }
 
 func TestSetPrefer(t *testing.T) {
@@ -156,6 +154,10 @@ func TestSetPrefer(t *testing.T) {
 		input  map[string]Pref
 		result http.Header
 	}{
+		{
+			map[string]Pref{},
+			http.Header{},
+		},
 		{
 			map[string]Pref{"respond-async": {}},
 			http.Header{"Prefer": {"respond-async"}},

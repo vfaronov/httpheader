@@ -37,12 +37,19 @@ func Via(h http.Header) []ViaElem {
 
 // SetVia replaces the Via header in h. See also AddVia.
 func SetVia(h http.Header, elems []ViaElem) {
+	if len(elems) == 0 {
+		h.Del("Via")
+		return
+	}
 	h.Set("Via", buildVia(elems))
 }
 
 // AddVia is like SetVia but appends instead of replacing.
-func AddVia(h http.Header, elem ViaElem) {
-	h.Add("Via", buildVia([]ViaElem{elem}))
+func AddVia(h http.Header, elems ...ViaElem) {
+	if len(elems) == 0 {
+		return
+	}
+	h.Add("Via", buildVia(elems))
 }
 
 func buildVia(elems []ViaElem) string {

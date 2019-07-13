@@ -142,12 +142,19 @@ LinksLoop:
 // Any members of Ext named like corresponding fields of LinkElem,
 // such as 'title*' or 'hreflang', are skipped.
 func SetLink(h http.Header, links []LinkElem) {
+	if links == nil {
+		h.Del("Link")
+		return
+	}
 	h.Set("Link", buildLink(links))
 }
 
 // AddLink is like SetLink but appends instead of replacing.
-func AddLink(h http.Header, link LinkElem) {
-	h.Add("Link", buildLink([]LinkElem{link}))
+func AddLink(h http.Header, links ...LinkElem) {
+	if len(links) == 0 {
+		return
+	}
+	h.Add("Link", buildLink(links))
 }
 
 func buildLink(links []LinkElem) string {

@@ -90,6 +90,10 @@ func UserAgent(h http.Header) []Product {
 
 // SetUserAgent replaces the User-Agent header in h.
 func SetUserAgent(h http.Header, products []Product) {
+	if len(products) == 0 {
+		h.Del("User-Agent")
+		return
+	}
 	h.Set("User-Agent", serializeProducts(products))
 }
 
@@ -100,6 +104,10 @@ func Server(h http.Header) []Product {
 
 // SetServer replaces the Server header in h.
 func SetServer(h http.Header, products []Product) {
+	if len(products) == 0 {
+		h.Del("Server")
+		return
+	}
 	h.Set("Server", serializeProducts(products))
 }
 
@@ -268,6 +276,10 @@ func Accept(h http.Header) []AcceptElem {
 // Note: Q in elems must be set explicitly to avoid sending "q=0",
 // which would mean "not acceptable".
 func SetAccept(h http.Header, elems []AcceptElem) {
+	if elems == nil {
+		h.Del("Accept")
+		return
+	}
 	b := &strings.Builder{}
 	for i, elem := range elems {
 		if i > 0 {

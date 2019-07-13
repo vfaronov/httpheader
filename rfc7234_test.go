@@ -8,17 +8,16 @@ import (
 )
 
 func ExampleWarning() {
-	header := http.Header{"Warning": {`299 gw1 "something is wrong"`}}
+	header := http.Header{"Warning": {`214 proxy1 "removed tracking pixels"`}}
 	fmt.Printf("%+v", Warning(header))
-	// Output: [{Code:299 Agent:gw1 Text:something is wrong Date:0001-01-01 00:00:00 +0000 UTC}]
+	// Output: [{Code:214 Agent:proxy1 Text:removed tracking pixels Date:0001-01-01 00:00:00 +0000 UTC}]
 }
 
 func ExampleAddWarning() {
 	header := http.Header{}
-	AddWarning(header, WarningElem{
-		Code: 299,
-		Text: "something is fishy",
-	})
+	AddWarning(header, WarningElem{Code: 299, Text: "this service is deprecated"})
+	fmt.Print(header)
+	// Output: map[Warning:[299 - "this service is deprecated"]]
 }
 
 func TestWarning(t *testing.T) {
@@ -344,6 +343,10 @@ func TestSetCacheControl(t *testing.T) {
 		input  CacheDirectives
 		result http.Header
 	}{
+		{
+			CacheDirectives{},
+			http.Header{},
+		},
 		{
 			CacheDirectives{NoStore: true, NoTransform: true, NoCache: true},
 			http.Header{"Cache-Control": {"no-store, no-transform, no-cache"}},

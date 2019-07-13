@@ -60,12 +60,19 @@ func IfMatch(h http.Header) []EntityTag {
 //
 // To send a wildcard (If-Match: *), pass AnyTag as the only element of tags.
 func SetIfMatch(h http.Header, tags []EntityTag) {
+	if len(tags) == 0 {
+		h.Del("If-Match")
+		return
+	}
 	h.Set("If-Match", buildTags(tags))
 }
 
 // AddIfMatch is like SetIfMatch but appends instead of replacing.
-func AddIfMatch(h http.Header, tag EntityTag) {
-	h.Add("If-Match", string(tag))
+func AddIfMatch(h http.Header, tags ...EntityTag) {
+	if len(tags) == 0 {
+		return
+	}
+	h.Add("If-Match", buildTags(tags))
 }
 
 // IfNoneMatch parses the If-None-Match header from h (RFC 7232 Section 3.2).
@@ -80,12 +87,19 @@ func IfNoneMatch(h http.Header) []EntityTag {
 //
 // To send a wildcard (If-None-Match: *), pass AnyTag as the only element of tags.
 func SetIfNoneMatch(h http.Header, tags []EntityTag) {
+	if len(tags) == 0 {
+		h.Del("If-None-Match")
+		return
+	}
 	h.Set("If-None-Match", buildTags(tags))
 }
 
 // AddIfNoneMatch is like SetIfNoneMatch but appends instead of replacing.
-func AddIfNoneMatch(h http.Header, tag EntityTag) {
-	h.Add("If-Match", string(tag))
+func AddIfNoneMatch(h http.Header, tags ...EntityTag) {
+	if len(tags) == 0 {
+		return
+	}
+	h.Add("If-None-Match", buildTags(tags))
 }
 
 func parseTags(h http.Header, name string) []EntityTag {

@@ -64,11 +64,18 @@ func Forwarded(h http.Header) []ForwardedElem {
 
 // SetForwarded replaces the Forwarded header in h (RFC 7239).
 func SetForwarded(h http.Header, elems []ForwardedElem) {
+	if len(elems) == 0 {
+		h.Del("Forwarded")
+		return
+	}
 	h.Set("Forwarded", buildForwarded(elems))
 }
 
 // AddForwarded is like SetForwarded but appends instead of replacing.
 func AddForwarded(h http.Header, elems ...ForwardedElem) {
+	if len(elems) == 0 {
+		return
+	}
 	h.Add("Forwarded", buildForwarded(elems))
 }
 

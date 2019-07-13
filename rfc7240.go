@@ -31,11 +31,18 @@ func Prefer(h http.Header) map[string]Pref {
 // SetPrefer replaces the Prefer header in h (RFC 7240 with errata).
 // See also AddPrefer.
 func SetPrefer(h http.Header, prefs map[string]Pref) {
+	if len(prefs) == 0 {
+		h.Del("Prefer")
+		return
+	}
 	h.Set("Prefer", buildPrefer(prefs))
 }
 
 // AddPrefer is like SetPrefer but appends instead of replacing.
 func AddPrefer(h http.Header, prefs map[string]Pref) {
+	if len(prefs) == 0 {
+		return
+	}
 	h.Add("Prefer", buildPrefer(prefs))
 }
 

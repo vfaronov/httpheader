@@ -8,19 +8,18 @@ import (
 
 func ExampleVia() {
 	header := http.Header{"Via": {
-		"1.1 foo.example.com:8080 (corporate)",
-		"2 bar.example.net",
+		"1.1 proxy2.example.com:8080 (corporate)",
+		"2 edge3.example.net",
 	}}
-	fmt.Printf("%q", Via(header))
-	// Output: [{"HTTP/1.1" "foo.example.com:8080" "corporate"} {"HTTP/2" "bar.example.net" ""}]
+	fmt.Print(Via(header))
+	// Output: [{HTTP/1.1 proxy2.example.com:8080 corporate} {HTTP/2 edge3.example.net }]
 }
 
 func ExampleAddVia() {
-	header := http.Header{"Via": {"1.0 foo"}}
-	AddVia(header, ViaElem{
-		ReceivedProto: "HTTP/1.1",
-		ReceivedBy:    "my-service",
-	})
+	header := http.Header{}
+	AddVia(header, ViaElem{ReceivedProto: "HTTP/1.1", ReceivedBy: "api-gw1"})
+	fmt.Print(header)
+	// Output: map[Via:[1.1 api-gw1]]
 }
 
 func TestVia(t *testing.T) {

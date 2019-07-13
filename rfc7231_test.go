@@ -10,8 +10,8 @@ import (
 
 func ExampleAllow() {
 	header := http.Header{"Allow": {"GET, HEAD, OPTIONS"}}
-	fmt.Printf("%q", Allow(header))
-	// Output: ["GET" "HEAD" "OPTIONS"]
+	fmt.Print(Allow(header))
+	// Output: [GET HEAD OPTIONS]
 }
 
 func ExampleSetAllow() {
@@ -147,6 +147,7 @@ func TestVary(t *testing.T) {
 func ExampleAddVary() {
 	header := http.Header{}
 	AddVary(header, map[string]bool{"Accept": true, "Accept-Encoding": true})
+	// Output:
 }
 
 func TestVaryFuzz(t *testing.T) {
@@ -555,15 +556,9 @@ func ExampleSetContentType() {
 }
 
 func ExampleAccept() {
-	header := http.Header{"Accept": {"Text/HTML, Text/*;Q=0.1"}}
+	header := http.Header{"Accept": {"Text/HTML; charset=utf-8; q=1; validate=yes"}}
 	fmt.Printf("%+v", Accept(header))
-	// Output: [{Type:text/html Q:1 Params:map[] Ext:map[]} {Type:text/* Q:0.1 Params:map[] Ext:map[]}]
-}
-
-func ExampleAccept_params() {
-	header := http.Header{"Accept": {"text/html; charset=utf-8; q=1; validate"}}
-	fmt.Printf("%+v", Accept(header))
-	// Output: [{Type:text/html Q:1 Params:map[charset:utf-8] Ext:map[validate:]}]
+	// Output: [{Type:text/html Q:1 Params:map[charset:utf-8] Ext:map[validate:yes]}]
 }
 
 func TestAccept(t *testing.T) {
@@ -904,6 +899,15 @@ func TestSetAccept(t *testing.T) {
 		input  []AcceptElem
 		result http.Header
 	}{
+		{
+			nil,
+			http.Header{},
+		},
+		{
+			// Accept permits an empty list.
+			[]AcceptElem{},
+			http.Header{"Accept": {""}},
+		},
 		{
 			[]AcceptElem{{Type: "text/html", Q: 1}},
 			http.Header{"Accept": {"text/html"}},

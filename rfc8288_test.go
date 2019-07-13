@@ -30,8 +30,8 @@ func ExampleAddLink() {
 		Rel:    "next",
 		Title:  "Witaj świecie!",
 	})
-	fmt.Printf("%q", header)
-	// Output: map["Link":["</articles/124>; rel=next; title*=UTF-8''Witaj%20%C5%9Bwiecie!"]]
+	fmt.Print(header)
+	// Output: map[Link:[</articles/124>; rel=next; title*=UTF-8''Witaj%20%C5%9Bwiecie!]]
 }
 
 const testBase = "http://x.test/a"
@@ -452,6 +452,15 @@ func TestSetLink(t *testing.T) {
 		input  []LinkElem
 		result http.Header
 	}{
+		{
+			nil,
+			http.Header{},
+		},
+		{
+			// Link permits an empty list.
+			[]LinkElem{},
+			http.Header{"Link": {""}},
+		},
 		{
 			[]LinkElem{{Rel: "next", Target: U("baz")}},
 			http.Header{"Link": {"<baz>; rel=next"}},

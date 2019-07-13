@@ -46,12 +46,19 @@ func Warning(h http.Header) []WarningElem {
 
 // SetWarning replaces the Warning header in h. See also AddWarning.
 func SetWarning(h http.Header, elems []WarningElem) {
+	if len(elems) == 0 {
+		h.Del("Warning")
+		return
+	}
 	h.Set("Warning", buildWarning(elems))
 }
 
 // AddWarning is like SetWarning but appends instead of replacing.
-func AddWarning(h http.Header, elem WarningElem) {
-	h.Add("Warning", buildWarning([]WarningElem{elem}))
+func AddWarning(h http.Header, elems ...WarningElem) {
+	if len(elems) == 0 {
+		return
+	}
+	h.Add("Warning", buildWarning(elems))
 }
 
 func buildWarning(elems []WarningElem) string {
@@ -254,6 +261,10 @@ func SetCacheControl(h http.Header, cc CacheDirectives) {
 	}
 	for name, value := range cc.Ext {
 		wrote = writeDirective(b, wrote, name, value)
+	}
+	if b.Len() == 0 {
+		h.Del("Cache-Control")
+		return
 	}
 	h.Set("Cache-Control", b.String())
 }
