@@ -18,7 +18,7 @@ type ViaElem struct {
 // that do not occur in practice but are theoretically admitted by RFC 3986.
 func Via(h http.Header) []ViaElem {
 	var elems []ViaElem
-	for v, vs := iterElems("", h["Via"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Via"]); v != ""; v, vs = iterElems(v, vs) {
 		var elem ViaElem
 		elem.ReceivedProto, v = consumeItem(v)
 		if strings.IndexByte(elem.ReceivedProto, '/') == -1 {

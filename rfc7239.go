@@ -15,12 +15,11 @@ import (
 // the (untrusted) client. Establishing trust is outside the scope of this package.
 func Forwarded(h http.Header) []ForwardedElem {
 	var elems []ForwardedElem
-	for v, vs := iterElems("", h["Forwarded"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Forwarded"]); v != ""; v, vs = iterElems(v, vs) {
 		var elem ForwardedElem
 		for {
 			var name, value string
 			name, v = consumeItem(v)
-			name = strings.ToLower(name)
 			if name == "" { // no forwarded-pair
 				if peek(v) == ';' {
 					v = v[1:]
@@ -28,6 +27,7 @@ func Forwarded(h http.Header) []ForwardedElem {
 				}
 				break
 			}
+			name = strings.ToLower(name)
 			if peek(v) != '=' {
 				break
 			}
@@ -124,7 +124,7 @@ func (elem ForwardedElem) ForAddr() (net.IP, int) {
 func nodeAddr(node string) (net.IP, int) {
 	rawIP, rawPort := node, ""
 	portPos := strings.LastIndexByte(node, ':')
-	if portPos < strings.IndexByte(node, ']') {
+	if portPos != -1 && portPos < strings.IndexByte(node, ']') {
 		// That's not a port, that's part of the IPv6 address.
 		portPos = -1
 	}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"testing"
 )
 
@@ -441,13 +440,9 @@ func TestLink(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			// Don't use checkParse here because %#v prints URLs as pointers.
-			expected := test.result
-			actual := Link(test.header, U(testBase))
-			if !reflect.DeepEqual(expected, actual) {
-				t.Errorf("parsing: %#v\nexpected: %+v\nactual:   %+v",
-					test.header, expected, actual)
-			}
+			// When debugging failures of this test, it may be useful to
+			// temporarily replace %#v with %+v in checkParse, to see the URLs.
+			checkParse(t, test.header, test.result, Link(test.header, U(testBase)))
 		})
 	}
 }

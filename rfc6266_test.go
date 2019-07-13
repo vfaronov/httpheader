@@ -152,9 +152,7 @@ func TestContentDisposition(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			dtype, params := ContentDisposition(test.header)
-			expected := []interface{}{test.dtype, test.params}
-			actual := []interface{}{dtype, params}
-			checkParse(t, test.header, expected, actual)
+			checkParse(t, test.header, test.dtype, dtype, test.params, params)
 		})
 	}
 }

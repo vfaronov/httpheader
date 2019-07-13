@@ -15,7 +15,7 @@ type Pref struct {
 // returning a map where keys are lowercase preference names.
 func Prefer(h http.Header) map[string]Pref {
 	var r map[string]Pref
-	for v, vs := iterElems("", h["Prefer"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Prefer"]); v != ""; v, vs = iterElems(v, vs) {
 		var name string
 		var pref Pref
 		name, pref.Value, v = consumeParam(v)

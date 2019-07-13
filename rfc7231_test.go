@@ -533,9 +533,7 @@ func TestContentType(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			mtype, params := ContentType(test.header)
-			expected := []interface{}{test.mtype, test.params}
-			actual := []interface{}{mtype, params}
-			checkParse(t, test.header, expected, actual)
+			checkParse(t, test.header, test.mtype, mtype, test.params, params)
 		})
 	}
 }

@@ -13,7 +13,7 @@ func peek(v string) byte {
 // (RFC 7230 Section 7) spanning multiple field-values (Section 3.2.2).
 // iterElems moves to the beginning of the next non-empty element in v.
 // If there are no more such elements in v, takes the next v from vs.
-// Returns the new values for v and vs, with vs = nil meaning end of iteration.
+// Returns the new values for v and vs, with v == "" meaning end of iteration.
 func iterElems(v string, vs []string) (newv string, newvs []string) {
 	orig := true // true means we are still at the same element we started at
 	for {

@@ -22,7 +22,7 @@ type WarningElem struct {
 // that do not occur in practice but are theoretically admitted by RFC 3986.
 func Warning(h http.Header) []WarningElem {
 	var elems []WarningElem
-	for v, vs := iterElems("", h["Warning"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Warning"]); v != ""; v, vs = iterElems(v, vs) {
 		var elem WarningElem
 		var codeStr string
 		codeStr, v = consumeItem(v)
@@ -79,7 +79,7 @@ func buildWarning(elems []WarningElem) string {
 
 // CacheDirectives represents directives of the Cache-Control header
 // (RFC 7234 Section 5.2). Standard directives are stored in the corresponding
-// fields; any cache extensions are stored in Ext.
+// fields; any unknown extensions are stored in Ext.
 type CacheDirectives struct {
 	NoStore         bool
 	NoTransform     bool
@@ -116,7 +116,7 @@ type CacheDirectives struct {
 	StaleWhileRevalidate int // RFC 5861 Section 3
 	StaleIfError         int // RFC 5861 Section 4
 
-	// Any other directives (cache extensions), with keys lowercased.
+	// Any unknown extension directives, with keys lowercased.
 	// A key mapping to an empty string is serialized to a directive
 	// without an argument.
 	Ext map[string]string
@@ -125,7 +125,7 @@ type CacheDirectives struct {
 // CacheControl parses the Cache-Control header from h (RFC 7234 Section 5.2).
 func CacheControl(h http.Header) CacheDirectives {
 	var cc CacheDirectives
-	for v, vs := iterElems("", h["Cache-Control"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Cache-Control"]); v != ""; v, vs = iterElems(v, vs) {
 		var name, value string
 		name, value, v = consumeParam(v)
 		switch name {

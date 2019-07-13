@@ -12,11 +12,14 @@ import (
 	"time"
 )
 
-func checkParse(t *testing.T, header http.Header, expected, actual interface{}) {
+func checkParse(t *testing.T, header http.Header, pairs ...interface{}) {
 	t.Helper()
-	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("parsing: %#v\nexpected: %#v\nactual:   %#v",
-			header, expected, actual)
+	for i := 0; i < len(pairs); i += 2 {
+		expected, actual := pairs[i], pairs[i+1]
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("parsing: %#v\nexpected: %#v\nactual:   %#v",
+				header, expected, actual)
+		}
 	}
 }
 
@@ -28,9 +31,10 @@ func checkGenerate(t *testing.T, input interface{}, expected, actual http.Header
 	}
 }
 
+// checkFuzz runs a battery of sub-tests for the following property:
+// Given any input header (with the given name), parseFunc must not panic or hang,
+// and generateFunc must not panic or hang on the value(s) returned by parseFunc.
 func checkFuzz(t *testing.T, name string, parseFunc, generateFunc interface{}) {
-	// Simplistic fuzz testing: On any input, the parse function must not panic,
-	// and the generate function must not panic on the result of the parse.
 	t.Helper()
 	parseFuncV := reflect.ValueOf(parseFunc)
 	generateFuncV := reflect.ValueOf(generateFunc)
@@ -38,33 +42,37 @@ func checkFuzz(t *testing.T, name string, parseFunc, generateFunc interface{}) {
 		t.Run("", func(t *testing.T) {
 			r := rand.New(rand.NewSource(int64(i)))
 			header := http.Header{}
-			for i := 0; i < 1+r.Intn(3); i++ {
+			n := 1 + r.Intn(3)
+			for i := 0; i < n; i++ {
 				b := make([]byte, r.Intn(64))
+				r.Read(b)
+				// Bias towards characters that trigger more parser states.
 				for j := range b {
-					// Biased towards punctuation, to trigger more parser states.
-					const chars = "\x00 \t,;=-()'*/\"\\abcdefghijklmnopqrstuvwxyz"
-					b[j] = chars[r.Intn(len(chars))]
+					if r.Intn(3) == 0 {
+						const punct = "\t \"%'()*,/:;<=>"
+						b[j] = punct[r.Intn(len(punct))]
+					}
 				}
 				header.Add(name, string(b))
 			}
 			t.Logf("header: %#v", header)
-			headerV := reflect.ValueOf(header)
-			resultV := parseFuncV.Call([]reflect.Value{headerV})
-			t.Logf("parsed: %#v", resultV)
-			generateFuncV.Call(append([]reflect.Value{headerV}, resultV...))
+			argsV := []reflect.Value{reflect.ValueOf(header)}
+			resultV := parseFuncV.Call(argsV)
+			generateFuncV.Call(append(argsV, resultV...))
 		})
 	}
 }
 
+// checkRoundTrip runs a battery of sub-tests for the following property:
+// Given any valid, canonicalized input value(s), generateFunc must generate
+// a header that, when parsed by parseFunc, gives back the same value(s).
+// Input values for each of generateFunc's positional arguments (after http.Header)
+// are produced from examples, using func likeExample.
 func checkRoundTrip(
 	t *testing.T,
 	generateFunc, parseFunc interface{},
 	examples ...interface{},
 ) {
-	// Property-based test: Generating and then parsing a valid value
-	// should give the same value (modulo canonicalization).
-	// Each of examples is an example (suitable for likeExample) of
-	// the corresponding positional argument to generateFunc.
 	t.Helper()
 	generateFuncV := reflect.ValueOf(generateFunc)
 	parseFuncV := reflect.ValueOf(parseFunc)
@@ -110,7 +118,7 @@ func likeExample(r *rand.Rand, ex interface{}) interface{} {
 	case reflect.Struct:
 		switch exV.Type() {
 		case reflect.TypeOf(time.Time{}):
-			return likeTime(r, ex.(time.Time))
+			return randTime(r, !ex.(time.Time).IsZero())
 		case reflect.TypeOf(url.URL{}):
 			return randURL(r)
 		default:
@@ -133,9 +141,9 @@ func likeExample(r *rand.Rand, ex interface{}) interface{} {
 func likeInt(r *rand.Rand, ex int) int {
 	switch ex {
 	case 999:
-		return 100 + r.Intn(899)
+		return 100 + r.Intn(900)
 	case 99:
-		return 10 + r.Intn(89)
+		return 10 + r.Intn(90)
 	case 9:
 		return r.Intn(10)
 	default:
@@ -158,14 +166,14 @@ func likeString(r *rand.Rand, ex string) string {
 	if ex == "empty" {
 		return ""
 	}
-	// like "X without bc" = like "X" with letters 'b' and 'c' replaced with 'Z'
+	// like "X without bc" = like "X" with letters 'b' and 'c' replaced with 'z'
 	var without string
-	if exs := strings.SplitN(ex, " without ", 2); len(exs) == 2 {
+	if exs := strings.Split(ex, " without "); len(exs) == 2 {
 		ex, without = exs[0], exs[1]
 	}
 	// like "X plus foo" = like "X" with the string "foo" appended
 	var plus string
-	if exs := strings.SplitN(ex, " plus ", 2); len(exs) == 2 {
+	if exs := strings.Split(ex, " plus "); len(exs) == 2 {
 		ex, plus = exs[0], exs[1]
 	}
 	// like "lower X" = like "X", lowercased
@@ -207,12 +215,15 @@ func likeString(r *rand.Rand, ex string) string {
 }
 
 const (
-	loalpha  = "abcdefghijklmnopqrstuvwxyz"
-	hialpha  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	alpha    = loalpha + hialpha
-	digit    = "0123456789"
-	alnum    = alpha + digit
-	tchar    = "!#$%&'*+-.^_`|~" + alnum
+	digit   = "0123456789"
+	loalpha = "abcdefghijklmnopqrstuvwxyz"
+	hialpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	alpha   = hialpha + loalpha
+	alnum   = digit + alpha
+
+	// RFC 7230 Section 3.2.6.
+	tchar = "!#$%&'*+-.^_`|~" + alnum
+	// Characters that can be represented inside a quoted-string or comment.
 	quotable = "\t !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~" + alnum +
 		"\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8A\x8B\x8C\x8D\x8E\x8F" +
 		"\x90" // ...and so on to 0xFF, but this should be enough
@@ -234,8 +245,8 @@ func randUTF8(r *rand.Rand) string {
 	return string(runes)
 }
 
-func likeTime(r *rand.Rand, ex time.Time) time.Time {
-	if ex.IsZero() && r.Intn(2) == 0 {
+func randTime(r *rand.Rand, nonzero bool) time.Time {
+	if !nonzero && r.Intn(2) == 0 {
 		return time.Time{}
 	}
 	return time.Date(2000+r.Intn(30), time.Month(1+r.Intn(12)), 1+r.Intn(28),
@@ -252,18 +263,18 @@ func randURL(r *rand.Rand) url.URL {
 	return url.URL{
 		Scheme:   "http",
 		Host:     randString(r, loalpha+digit+".-"),
-		Path:     "/" + randString(r, alnum+"-._~+,;=:/"),
+		Path:     "/" + randString(r, alnum+"-_~+,;=:/"),
 		RawQuery: randString(r, alnum+"&="),
 		Fragment: randString(r, alnum),
 	}
 }
 
 // likeStruct returns a new struct of the same type as ex,
-// with each field set to likeExample of ex's value for that field.
+// with each field likeExample of ex's value for that field.
 func likeStruct(r *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
 	newV := reflect.New(exV.Type()).Elem()
-	for i := 0; i < exV.NumField(); i++ {
+	for i := 0; i < newV.NumField(); i++ {
 		fieldEx := exV.Field(i).Interface()
 		fieldNew := likeExample(r, fieldEx)
 		newV.Field(i).Set(reflect.ValueOf(fieldNew))
@@ -272,18 +283,18 @@ func likeStruct(r *rand.Rand, ex interface{}) interface{} {
 }
 
 // likeSlice returns a short slice (nil if empty) of the same type as ex,
-// with each element set to likeExample of a random one of ex's values.
+// with each element likeExample of a random one of ex's elements.
 func likeSlice(r *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
-	nitems := r.Intn(4)
-	if nitems == 0 {
+	n := r.Intn(4)
+	if n == 0 {
 		return reflect.Zero(exV.Type()).Interface()
 	}
-	newV := reflect.MakeSlice(exV.Type(), nitems, nitems)
-	itemEx := exV.Index(r.Intn(exV.Len())).Interface()
-	for i := 0; i < nitems; i++ {
-		itemNew := likeExample(r, itemEx)
-		newV.Index(i).Set(reflect.ValueOf(itemNew))
+	newV := reflect.MakeSlice(exV.Type(), n, n)
+	for i := 0; i < n; i++ {
+		elemEx := exV.Index(r.Intn(exV.Len())).Interface()
+		elemNew := likeExample(r, elemEx)
+		newV.Index(i).Set(reflect.ValueOf(elemNew))
 	}
 	return newV.Interface()
 }
@@ -292,16 +303,17 @@ func likeSlice(r *rand.Rand, ex interface{}) interface{} {
 // with each key/value pair likeExample of a random one of ex's key/value pairs.
 func likeMap(r *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
-	nitems := r.Intn(4)
-	if nitems == 0 {
+	n := r.Intn(4)
+	if n == 0 {
 		return reflect.Zero(exV.Type()).Interface()
 	}
 	newV := reflect.MakeMap(exV.Type())
-	keyExV := exV.MapKeys()[r.Intn(exV.Len())]
-	valueExV := exV.MapIndex(keyExV)
-	for i := 0; i < nitems; i++ {
-		keyNew := likeExample(r, keyExV.Interface())
-		valueNew := likeExample(r, valueExV.Interface())
+	for i := 0; i < n; i++ {
+		keyExV := exV.MapKeys()[r.Intn(exV.Len())]
+		keyEx := keyExV.Interface()
+		keyNew := likeExample(r, keyEx)
+		valueEx := exV.MapIndex(keyExV).Interface()
+		valueNew := likeExample(r, valueEx)
 		newV.SetMapIndex(reflect.ValueOf(keyNew), reflect.ValueOf(valueNew))
 	}
 	return newV.Interface()

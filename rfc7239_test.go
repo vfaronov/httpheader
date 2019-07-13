@@ -290,7 +290,7 @@ func TestForwardedElemByAddr(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			ip, port := ForwardedElem{By: test.value}.ByAddr()
-			if !reflect.DeepEqual(ip, test.ip) {
+			if !ip.Equal(test.ip) {
 				t.Errorf("parsing %q\nexpected IP: %s\nactual IP:   %s",
 					test.value, test.ip, ip)
 			}

@@ -14,7 +14,7 @@ import (
 // Allow returns a non-nil slice of length 0.
 func Allow(h http.Header) []string {
 	var methods []string
-	for v, vs := iterElems("", h["Allow"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Allow"]); v != ""; v, vs = iterElems(v, vs) {
 		var method string
 		method, v = consumeItem(v)
 		methods = append(methods, method)
@@ -36,7 +36,7 @@ func SetAllow(h http.Header, methods []string) {
 // so it must be checked explicitly.
 func Vary(h http.Header) map[string]bool {
 	var names map[string]bool
-	for v, vs := iterElems("", h["Vary"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Vary"]); v != ""; v, vs = iterElems(v, vs) {
 		var name string
 		name, v = consumeItem(v)
 		name = http.CanonicalHeaderKey(name)
@@ -223,7 +223,7 @@ type AcceptElem struct {
 // The function MatchAccept is useful for working with the returned slice.
 func Accept(h http.Header) []AcceptElem {
 	var elems []AcceptElem
-	for v, vs := iterElems("", h["Accept"]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h["Accept"]); v != ""; v, vs = iterElems(v, vs) {
 		elem := AcceptElem{Q: 1}
 		elem.Type, v = consumeItem(v)
 		elem.Type = strings.ToLower(elem.Type)

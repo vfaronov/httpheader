@@ -90,7 +90,7 @@ func AddIfNoneMatch(h http.Header, tag EntityTag) {
 
 func parseTags(h http.Header, name string) []EntityTag {
 	var tags []EntityTag
-	for v, vs := iterElems("", h[name]); vs != nil; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", h[name]); v != ""; v, vs = iterElems(v, vs) {
 		orig := v
 		var prefixLen, endPos int
 		var tag EntityTag
