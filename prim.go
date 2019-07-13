@@ -58,22 +58,17 @@ func skipWS(v string) string {
 	return v
 }
 
-func consumeQuoted(v string, strict bool) (text, newv string, ok bool) {
-	return consumeDelimited(v, '"', '"', strict)
+func consumeQuoted(v string) (text, newv string) {
+	return consumeDelimited(v, '"', '"')
 }
 
-func consumeComment(v string, strict bool) (text, newv string, ok bool) {
-	return consumeDelimited(v, '(', ')', strict)
+func consumeComment(v string) (text, newv string) {
+	return consumeDelimited(v, '(', ')')
 }
 
-func consumeDelimited(
-	v string,
-	opener, closer byte,
-	strict bool,
-) (text, newv string, ok bool) {
-	orig := v
+func consumeDelimited(v string, opener, closer byte) (text, newv string) {
 	if peek(v) != opener {
-		return "", v, false
+		return "", v
 	}
 	v = v[1:]
 
@@ -86,7 +81,7 @@ func consumeDelimited(
 		case closer:
 			nesting--
 			if nesting == 0 {
-				return v[:i], v[i+1:], true
+				return v[:i], v[i+1:]
 			}
 		case opener:
 			nesting++
@@ -95,10 +90,7 @@ func consumeDelimited(
 		}
 	}
 	// Unterminated string.
-	if strict {
-		return "", orig, false
-	}
-	return v, "", false
+	return v, ""
 
 buffered:
 	// But once we have encountered a quoted pair,
@@ -114,7 +106,7 @@ buffered:
 		case v[i] == closer:
 			nesting--
 			if nesting == 0 {
-				return string(buf), v[i+1:], true
+				return string(buf), v[i+1:]
 			}
 			buf = append(buf, v[i])
 		case v[i] == opener:
@@ -127,10 +119,7 @@ buffered:
 		}
 	}
 	// Unterminated string.
-	if strict {
-		return "", orig, false
-	}
-	return string(buf), "", false
+	return string(buf), ""
 }
 
 func writeQuoted(b *strings.Builder, s string) {
@@ -154,7 +143,7 @@ func writeDelimited(b *strings.Builder, s string, opener, closer byte) {
 
 func consumeItemOrQuoted(v string) (text, newv string) {
 	if peek(v) == '"' {
-		text, newv, _ = consumeQuoted(v, false)
+		text, newv = consumeQuoted(v)
 		return
 	}
 	return consumeItem(v)

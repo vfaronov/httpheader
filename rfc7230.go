@@ -28,7 +28,7 @@ func Via(h http.Header) []ViaElem {
 		elem.ReceivedBy, v = consumeAgent(v)
 		v = skipWS(v)
 		if peek(v) == '(' {
-			elem.Comment, v, _ = consumeComment(v, false)
+			elem.Comment, v = consumeComment(v)
 		}
 		elems = append(elems, elem)
 	}

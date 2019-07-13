@@ -2,10 +2,8 @@ package httpheader
 
 import (
 	"fmt"
-	"math/rand"
 	"net"
 	"net/http"
-	"reflect"
 	"testing"
 )
 
@@ -19,26 +17,6 @@ func ExampleForwarded() {
 	}
 	// Output: 192.0.2.61 0
 	// 2001:db8::fa40 19950
-}
-
-func ExampleForwarded_malformed() {
-	// An attacker submits a malformed Forwarded value
-	// (note the unterminated quoted string), hoping to
-	// impersonate 10.5.7.13 by "shadowing" later values.
-	v := `for=10.5.7.13;by="`
-
-	// A gateway blindly appends the attacker's true IP address.
-	v += `, for=198.51.100.73;by=10.14.2.19`
-
-	// Both elements are parsed successfully.
-	header := http.Header{"Forwarded": {v}}
-	fmt.Printf("%+v", Forwarded(header))
-
-	// However, none of this information can be trusted
-	// unless you know (perhaps from configuration) that
-	// the last element is always appended by a trusted gateway.
-
-	// Output: [{By: For:10.5.7.13 Host: Proto: Ext:map[]} {By:10.14.2.19 For:198.51.100.73 Host: Proto: Ext:map[]}]
 }
 
 func ExampleAddForwarded() {
@@ -109,8 +87,8 @@ func TestForwarded(t *testing.T) {
 			},
 		},
 
-		// Invalid headers. Except as documented on the Forwarded function,
-		// precise outputs on them are not a guaranteed part of the API.
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Forwarded": {""}},
@@ -130,11 +108,15 @@ func TestForwarded(t *testing.T) {
 		},
 		{
 			http.Header{"Forwarded": {`for=_a;by=", for=_b`}},
-			[]ForwardedElem{{For: "_a"}, {For: "_b"}},
+			[]ForwardedElem{{For: "_a", By: ", for=_b"}},
+		},
+		{
+			http.Header{"Forwarded": {`for=_a;by=", for="_b"`}},
+			[]ForwardedElem{{For: "_a", By: ", for="}},
 		},
 		{
 			http.Header{"Forwarded": {`for=_a;by="\, for=_b`}},
-			[]ForwardedElem{{For: "_a"}, {For: "_b"}},
+			[]ForwardedElem{{For: "_a", By: ", for=_b"}},
 		},
 		{
 			http.Header{"Forwarded": {
@@ -220,33 +202,6 @@ func TestForwardedRoundTrip(t *testing.T) {
 			Ext:   map[string]string{"lower token": "quotable | empty"},
 		}},
 	)
-}
-
-func TestForwardedRecover(t *testing.T) {
-	// Property-based test: A valid element at the end of a field-value
-	// is recovered regardless of what precedes it.
-	for i := 0; i < 100; i++ {
-		t.Run("", func(t *testing.T) {
-			r := rand.New(rand.NewSource(int64(i)))
-			junk := make([]byte, r.Intn(64))
-			r.Read(junk)
-			header := http.Header{
-				"Forwarded": {string(junk) + ", for=_a;by=_b"},
-			}
-			t.Logf("header: %q", header)
-			parsed := Forwarded(header)
-			t.Logf("parsed: %#v", parsed)
-			if len(parsed) == 0 {
-				t.Fatalf("no elements parsed")
-			}
-			expected := ForwardedElem{For: "_a", By: "_b"}
-			actual := parsed[len(parsed)-1]
-			if !reflect.DeepEqual(expected, actual) {
-				t.Fatalf("failed to recover:\nexpected: %#v\nactual:   %#v",
-					expected, actual)
-			}
-		})
-	}
 }
 
 func BenchmarkForwarded(b *testing.B) {

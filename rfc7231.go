@@ -132,7 +132,7 @@ func parseProducts(v string) []Product {
 				break
 			}
 			var comment string
-			comment, v, _ = consumeComment(v, false)
+			comment, v = consumeComment(v)
 			if product.Comment == "" {
 				product.Comment = comment
 			} else {

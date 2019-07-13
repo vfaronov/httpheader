@@ -30,7 +30,7 @@ func Warning(h http.Header) []WarningElem {
 		v = skipWS(v)
 		elem.Agent, v = consumeAgent(v)
 		v = skipWS(v)
-		elem.Text, v, _ = consumeQuoted(v, false)
+		elem.Text, v = consumeQuoted(v)
 		v = skipWS(v)
 		if peek(v) == '"' {
 			nextQuote := strings.IndexByte(v[1:], '"')

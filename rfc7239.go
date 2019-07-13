@@ -9,10 +9,10 @@ import (
 
 // Forwarded parses the Forwarded header from h (RFC 7239).
 //
-// Any valid elements at the end of the header are guaranteed to be parsed, even if
-// they are preceded by malformed elements. This ensures that any information
-// appended by a trusted gateway is recovered regardless of what was received from
-// the (untrusted) client. Establishing trust is outside the scope of this package.
+// Do not trust the returned values for sensitive purposes such as access control,
+// unless you have a trusted gateway controlling the Forwarded header. This
+// header's syntax makes it possible for a malicious client to submit a malformed
+// value that will "shadow" further elements appended to the same value.
 func Forwarded(h http.Header) []ForwardedElem {
 	var elems []ForwardedElem
 	for v, vs := iterElems("", h["Forwarded"]); v != ""; v, vs = iterElems(v, vs) {
@@ -33,11 +33,7 @@ func Forwarded(h http.Header) []ForwardedElem {
 			}
 			v = v[1:]
 			if peek(v) == '"' {
-				var ok bool
-				value, v, ok = consumeQuoted(v, true)
-				if !ok { // unterminated string
-					break
-				}
+				value, v = consumeQuoted(v)
 			} else {
 				value, v = consumeItem(v)
 			}
