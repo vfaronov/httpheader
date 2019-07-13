@@ -170,21 +170,10 @@ func consumeParameterized(v string) (
 
 func consumeParams(v string) (params map[string]string, newv string) {
 	for {
-		v = skipWS(v)
-		if peek(v) != ';' {
-			break
-		}
-		v = skipWS(v[1:])
-		if c := peek(v); c == ';' || c == ',' || c == 0 {
-			// This is an empty parameter.
-			continue
-		}
 		var name, value string
 		name, value, v = consumeParam(v)
-		// Ignore duplicate parameters. This is strictly required for RFC 8288's
-		// standard parameters, but is reasonable behavior in general.
-		if _, ok := params[name]; ok {
-			continue
+		if name == "" {
+			break
 		}
 		if params == nil {
 			params = make(map[string]string)
@@ -195,7 +184,14 @@ func consumeParams(v string) (params map[string]string, newv string) {
 }
 
 func consumeParam(v string) (name, value, newv string) {
+	v = skipWS(v)
+	for peek(v) == ';' {
+		v = skipWS(v[1:])
+	}
 	name, v = consumeItem(v)
+	if name == "" {
+		return "", "", v
+	}
 	name = strings.ToLower(name)
 	v = skipWS(v)
 	if peek(v) == '=' {

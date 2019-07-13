@@ -52,10 +52,16 @@ LinksLoop:
 		}
 		link.Target = base.ResolveReference(link.Target)
 
-		var params map[string]string
-		params, v = consumeParams(v)
-		for name, value := range params {
+		// RFC 8288 requires us to ignore duplicates of certain parameters.
+		var seenRel, seenMedia, seenTitle, seenTitleStar, seenType bool
+	ParamsLoop:
+		for {
+			var name, value string
+			name, value, v = consumeParam(v)
 			switch name {
+			case "":
+				break ParamsLoop
+
 			case "anchor":
 				link.Anchor, err = url.Parse(value)
 				if err != nil {
@@ -66,7 +72,11 @@ LinksLoop:
 				link.Anchor = base.ResolveReference(link.Anchor)
 
 			case "rel":
+				if seenRel {
+					continue
+				}
 				link.Rel = strings.ToLower(value)
+				seenRel = true
 
 			case "rev":
 				// 'rev' is deprecated by RFC 8288.
@@ -75,28 +85,39 @@ LinksLoop:
 				// so discard it.
 
 			case "title":
+				if seenTitle {
+					continue
+				}
 				if link.Title == "" { // not filled in from 'title*' yet
 					link.Title = value
 				}
+				seenTitle = true
 
 			case "title*":
-				decoded, err := decodeExtValue(value)
-				if err == nil {
-					link.Title = decoded
-				} else if _, ok := params["title"]; !ok {
-					// If there is no plain 'title', this mangled encoded form
-					// of 'title*' is the best we have.
-					link.Title = value
+				if seenTitleStar {
+					continue
 				}
+				if decoded, err := decodeExtValue(value); err == nil {
+					link.Title = decoded
+				}
+				seenTitleStar = true
 
 			case "type":
+				if seenType {
+					continue
+				}
 				link.Type = strings.ToLower(value)
+				seenType = true
 
 			case "hreflang":
 				link.HrefLang = strings.ToLower(value)
 
 			case "media":
+				if seenMedia {
+					continue
+				}
 				link.Media = value
+				seenMedia = true
 
 			default: // extension attributes
 				if link.Ext == nil {
@@ -104,13 +125,8 @@ LinksLoop:
 				}
 				if strings.HasSuffix(name, "*") {
 					plainName := name[:len(name)-1]
-					decoded, err := decodeExtValue(value)
-					if err == nil {
+					if decoded, err := decodeExtValue(value); err == nil {
 						link.Ext[plainName] = decoded
-					} else if _, ok := params[plainName]; !ok {
-						// If there is no plain 'name', this mangled encoded form
-						// of 'name*' is the best we have.
-						link.Ext[plainName] = value
 					}
 				} else if link.Ext[name] == "" { // not filled in from 'name*' yet
 					link.Ext[name] = value

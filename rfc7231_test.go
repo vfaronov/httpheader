@@ -508,7 +508,7 @@ func TestContentType(t *testing.T) {
 		{
 			http.Header{"Content-Type": {"text/html charset=utf-8"}},
 			"text/html",
-			nil,
+			map[string]string{"charset": "utf-8"},
 		},
 		{
 			http.Header{"Content-Type": {"charset=utf-8"}},
@@ -794,7 +794,13 @@ func TestAccept(t *testing.T) {
 		},
 		{
 			http.Header{"Accept": {"text html"}},
-			[]AcceptElem{{Type: "text", Q: 1}},
+			[]AcceptElem{
+				{
+					Type:   "text",
+					Q:      1,
+					Params: map[string]string{"html": ""},
+				},
+			},
 		},
 		{
 			http.Header{"Accept": {"text/html/plain"}},

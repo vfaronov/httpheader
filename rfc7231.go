@@ -237,17 +237,11 @@ func Accept(h http.Header) []AcceptElem {
 		elem.Type = strings.ToLower(elem.Type)
 		afterQ := false
 		for {
-			v = skipWS(v)
-			if peek(v) != ';' {
-				break
-			}
-			v = skipWS(v[1:])
-			if c := peek(v); c == ';' || c == ',' || c == 0 {
-				// This is an empty parameter.
-				continue
-			}
 			var name, value string
 			name, value, v = consumeParam(v)
+			if name == "" {
+				break
+			}
 			// 'q' separates media type parameters from extension parameters.
 			switch {
 			case name == "q":

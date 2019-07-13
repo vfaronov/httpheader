@@ -307,13 +307,7 @@ func TestLink(t *testing.T) {
 		},
 		{
 			http.Header{"Link": {"<b>;=;rel=next"}},
-			[]LinkElem{
-				{
-					Rel:    "next",
-					Target: U("http://x.test/b"),
-					Ext:    map[string]string{"": ""},
-				},
-			},
+			nil,
 		},
 		{
 			http.Header{"Link": {"<b>;;;rel=next"}},
@@ -336,7 +330,12 @@ func TestLink(t *testing.T) {
 		{
 			http.Header{"Link": {"<b>; rel=next prefetch; hreflang=en"}},
 			[]LinkElem{
-				{Rel: "next", Target: U("http://x.test/b")},
+				{
+					Rel:      "next",
+					Target:   U("http://x.test/b"),
+					HrefLang: "en",
+					Ext:      map[string]string{"prefetch": ""},
+				},
 			},
 		},
 		{
@@ -365,7 +364,7 @@ func TestLink(t *testing.T) {
 				{
 					Rel:    "next",
 					Target: U("http://x.test/b"),
-					Ext:    map[string]string{"myattr": ""},
+					Ext:    map[string]string{},
 				},
 			},
 		},
@@ -375,7 +374,7 @@ func TestLink(t *testing.T) {
 				{
 					Rel:    "next",
 					Target: U("http://x.test/b"),
-					Ext:    map[string]string{"myattr": "''"},
+					Ext:    map[string]string{},
 				},
 			},
 		},
@@ -417,7 +416,7 @@ func TestLink(t *testing.T) {
 		{
 			http.Header{"Link": {"<b>; rel=up; title*=Hello"}},
 			[]LinkElem{
-				{Rel: "up", Target: U("http://x.test/b"), Title: "Hello"},
+				{Rel: "up", Target: U("http://x.test/b")},
 			},
 		},
 		{
@@ -434,6 +433,21 @@ func TestLink(t *testing.T) {
 					Target:   U("http://x.test/b"),
 					HrefLang: "en",
 					Ext:      map[string]string{"extra": ""},
+				},
+			},
+		},
+		{
+			// RFC 8288 requires us to ignore these duplicates.
+			http.Header{"Link": {
+				`<b>;rel=next;media=screen;title=B;title*=UTF-8''BB;type=text/html; rel=prev;media=print;title=C;title*=UTF-8''CC;type=text/xml`,
+			}},
+			[]LinkElem{
+				{
+					Rel:    "next",
+					Target: U("http://x.test/b"),
+					Media:  "screen",
+					Title:  "BB",
+					Type:   "text/html",
 				},
 			},
 		},

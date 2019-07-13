@@ -121,7 +121,10 @@ func TestPrefer(t *testing.T) {
 		},
 		{
 			http.Header{"Prefer": {"foo bar; baz, qux"}},
-			map[string]Pref{"foo": {"", nil}, "qux": {"", nil}},
+			map[string]Pref{
+				"foo": {"", map[string]string{"bar": "", "baz": ""}},
+				"qux": {"", nil},
+			},
 		},
 		{
 			http.Header{"Prefer": {";;;, foo=yes"}},
@@ -130,6 +133,10 @@ func TestPrefer(t *testing.T) {
 		{
 			http.Header{"Prefer": {"foo=bar=baz"}},
 			map[string]Pref{"foo": {"bar", nil}},
+		},
+		{
+			http.Header{"Prefer": {";foo=bar;baz=qux"}},
+			map[string]Pref{"foo": {"bar", map[string]string{"baz": "qux"}}},
 		},
 	}
 	for _, test := range tests {
