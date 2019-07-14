@@ -96,6 +96,16 @@ type CacheDirectives struct {
 	ProxyRevalidate bool
 	Immutable       bool // RFC 8246
 
+	MaxAge               Delta
+	SMaxage              Delta
+	MinFresh             Delta
+	StaleWhileRevalidate Delta // RFC 5861 Section 3
+	StaleIfError         Delta // RFC 5861 Section 4
+
+	// A max-stale directive without an argument (meaning "any age")
+	// is represented as the special very large value Eternity.
+	MaxStale Delta
+
 	// NoCache is true if the no-cache directive is present without an argument.
 	// If it has an argument -- a list of header names -- these are
 	// stored in NoCacheHeaders, canonicalized with http.CanonicalHeaderKey;
@@ -105,29 +115,32 @@ type CacheDirectives struct {
 	Private        bool
 	PrivateHeaders []string
 
-	// For the max-age and s-maxage directives:
-	// nil means the directive is absent;
-	// a pointer to 0 means the directive is present with the argument 0.
-	// Use func Just to set these fields in a CacheDirectives literal.
-	MaxAge  *int
-	SMaxage *int
-
-	// For the max-stale directive:
-	// 0 means the directive is absent or (equivalently) has the argument 0;
-	// -1 means the directive is present without a value ("any age").
-	MaxStale int
-
-	// For the min-fresh, stale-while-revalidate, and stale-if-error directives:
-	// 0 means the directive is absent or (equivalently) has the argument 0.
-	MinFresh             int
-	StaleWhileRevalidate int // RFC 5861 Section 3
-	StaleIfError         int // RFC 5861 Section 4
-
 	// Any unknown extension directives, with keys lowercased.
 	// A key mapping to an empty string is serialized to a directive
 	// without an argument.
 	Ext map[string]string
 }
+
+// A Delta represents a numeric cache directive which may be either absent
+// or a number of seconds. The zero value of Delta is the absent value,
+// not 0 seconds.
+type Delta struct {
+	seconds int
+	ok      bool
+}
+
+// Dur returns the duration of d if it is present; otherwise 0, false.
+func (d Delta) Dur() (dur time.Duration, ok bool) {
+	return time.Duration(d.seconds) * time.Second, d.ok
+}
+
+// DeltaSeconds returns a Delta of the given number of seconds.
+func DeltaSeconds(s int) Delta {
+	return Delta{s, true}
+}
+
+// Eternity represents unlimited age for the max-stale cache directive.
+var Eternity = Delta{1<<31 - 1, true}
 
 // CacheControl parses the Cache-Control header from h (RFC 7234 Section 5.2).
 func CacheControl(h http.Header) CacheDirectives {
@@ -146,11 +159,11 @@ func CacheControl(h http.Header) CacheDirectives {
 			cc.Public = true
 		case "max-age":
 			if seconds, err := strconv.Atoi(value); err == nil {
-				cc.MaxAge = &seconds
+				cc.MaxAge = DeltaSeconds(seconds)
 			}
 		case "s-maxage":
 			if seconds, err := strconv.Atoi(value); err == nil {
-				cc.SMaxage = &seconds
+				cc.SMaxage = DeltaSeconds(seconds)
 			}
 		case "no-cache":
 			if value == "" {
@@ -163,9 +176,13 @@ func CacheControl(h http.Header) CacheDirectives {
 		case "no-store":
 			cc.NoStore = true
 		case "stale-while-revalidate":
-			cc.StaleWhileRevalidate, _ = strconv.Atoi(value)
+			if seconds, err := strconv.Atoi(value); err == nil {
+				cc.StaleWhileRevalidate = DeltaSeconds(seconds)
+			}
 		case "stale-if-error":
-			cc.StaleIfError, _ = strconv.Atoi(value)
+			if seconds, err := strconv.Atoi(value); err == nil {
+				cc.StaleIfError = DeltaSeconds(seconds)
+			}
 		case "no-transform":
 			cc.NoTransform = true
 		case "immutable":
@@ -176,12 +193,14 @@ func CacheControl(h http.Header) CacheDirectives {
 			cc.ProxyRevalidate = true
 		case "max-stale":
 			if value == "" {
-				cc.MaxStale = -1
-			} else {
-				cc.MaxStale, _ = strconv.Atoi(value)
+				cc.MaxStale = Eternity
+			} else if seconds, err := strconv.Atoi(value); err == nil {
+				cc.MaxStale = DeltaSeconds(seconds)
 			}
 		case "min-fresh":
-			cc.MinFresh, _ = strconv.Atoi(value)
+			if seconds, err := strconv.Atoi(value); err == nil {
+				cc.MinFresh = DeltaSeconds(seconds)
+			}
 		default:
 			if cc.Ext == nil {
 				cc.Ext = make(map[string]string)
@@ -235,29 +254,32 @@ func SetCacheControl(h http.Header, cc CacheDirectives) {
 			b.WriteString(`"`)
 		}
 	}
-	if cc.MaxAge != nil {
-		wrote = writeDirective(b, wrote, "max-age", strconv.Itoa(*cc.MaxAge))
+	if cc.MaxAge.ok {
+		wrote = writeDirective(b, wrote, "max-age",
+			strconv.Itoa(cc.MaxAge.seconds))
 	}
-	if cc.SMaxage != nil {
-		wrote = writeDirective(b, wrote, "s-maxage", strconv.Itoa(*cc.SMaxage))
+	if cc.SMaxage.ok {
+		wrote = writeDirective(b, wrote, "s-maxage",
+			strconv.Itoa(cc.SMaxage.seconds))
 	}
-	if cc.MaxStale != 0 {
+	if cc.MaxStale.ok {
 		var value string
-		if cc.MaxStale != -1 {
-			value = strconv.Itoa(cc.MaxStale)
+		if cc.MaxStale != Eternity {
+			value = strconv.Itoa(cc.MaxStale.seconds)
 		}
 		wrote = writeDirective(b, wrote, "max-stale", value)
 	}
-	if cc.MinFresh != 0 {
-		wrote = writeDirective(b, wrote, "min-fresh", strconv.Itoa(cc.MinFresh))
+	if cc.MinFresh.ok {
+		wrote = writeDirective(b, wrote, "min-fresh",
+			strconv.Itoa(cc.MinFresh.seconds))
 	}
-	if cc.StaleWhileRevalidate != 0 {
+	if cc.StaleWhileRevalidate.ok {
 		wrote = writeDirective(b, wrote, "stale-while-revalidate",
-			strconv.Itoa(cc.StaleWhileRevalidate))
+			strconv.Itoa(cc.StaleWhileRevalidate.seconds))
 	}
-	if cc.StaleIfError != 0 {
+	if cc.StaleIfError.ok {
 		wrote = writeDirective(b, wrote, "stale-if-error",
-			strconv.Itoa(cc.StaleIfError))
+			strconv.Itoa(cc.StaleIfError.seconds))
 	}
 	for name, value := range cc.Ext {
 		wrote = writeDirective(b, wrote, name, value)
@@ -277,9 +299,4 @@ func headerNames(v string) []string {
 		names[i] = http.CanonicalHeaderKey(names[i])
 	}
 	return names
-}
-
-// Just returns a pointer to val.
-func Just(val int) *int {
-	return &val
 }

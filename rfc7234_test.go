@@ -214,11 +214,20 @@ func BenchmarkWarningComplex(b *testing.B) {
 	}
 }
 
+func ExampleCacheControl() {
+	ourAge := time.Duration(10) * time.Minute
+	header := http.Header{"Cache-Control": {"max-age=300, must-revalidate"}}
+	if maxAge, ok := CacheControl(header).MaxAge.Dur(); ok && ourAge > maxAge {
+		fmt.Println("our copy is stale")
+	}
+	// Output: our copy is stale
+}
+
 func ExampleSetCacheControl() {
 	header := http.Header{}
 	SetCacheControl(header, CacheDirectives{
 		Public: true,
-		MaxAge: Just(600),
+		MaxAge: DeltaSeconds(600),
 		Ext:    map[string]string{"priority": "5"},
 	})
 	fmt.Println(header)
@@ -253,7 +262,7 @@ func TestCacheControl(t *testing.T) {
 		},
 		{
 			http.Header{"Cache-Control": {"Immutable, Max-Age=3600"}},
-			CacheDirectives{Immutable: true, MaxAge: Just(3600)},
+			CacheDirectives{Immutable: true, MaxAge: DeltaSeconds(3600)},
 		},
 		{
 			http.Header{"Cache-Control": {"private,no-cache"}},
@@ -275,22 +284,22 @@ func TestCacheControl(t *testing.T) {
 		},
 		{
 			http.Header{"Cache-Control": {"max-age=0, s-maxage=0"}},
-			CacheDirectives{MaxAge: Just(0), SMaxage: Just(0)},
+			CacheDirectives{MaxAge: DeltaSeconds(0), SMaxage: DeltaSeconds(0)},
 		},
 		{
 			http.Header{"Cache-Control": {"only-if-cached,max-stale"}},
-			CacheDirectives{OnlyIfCached: true, MaxStale: -1},
+			CacheDirectives{OnlyIfCached: true, MaxStale: Eternity},
 		},
 		{
 			http.Header{"Cache-Control": {`only-if-cached,max-stale="3600"`}},
-			CacheDirectives{OnlyIfCached: true, MaxStale: 3600},
+			CacheDirectives{OnlyIfCached: true, MaxStale: DeltaSeconds(3600)},
 		},
 		{
 			http.Header{"Cache-Control": {
 				`Min-Fresh=300, Urgent, Foo="bar, baz"`,
 			}},
 			CacheDirectives{
-				MinFresh: 300,
+				MinFresh: DeltaSeconds(300),
 				Ext: map[string]string{
 					"urgent": "",
 					"foo":    "bar, baz",
@@ -304,9 +313,9 @@ func TestCacheControl(t *testing.T) {
 			}},
 			CacheDirectives{
 				Public:               true,
-				MaxAge:               Just(86400),
-				StaleWhileRevalidate: 300,
-				StaleIfError:         180,
+				MaxAge:               DeltaSeconds(86400),
+				StaleWhileRevalidate: DeltaSeconds(300),
+				StaleIfError:         DeltaSeconds(180),
 			},
 		},
 
@@ -331,11 +340,11 @@ func TestCacheControl(t *testing.T) {
 		},
 		{
 			http.Header{"Cache-Control": {"max-age=60=300, private"}},
-			CacheDirectives{MaxAge: Just(60), Private: true},
+			CacheDirectives{MaxAge: DeltaSeconds(60), Private: true},
 		},
 		{
 			http.Header{"Cache-Control": {"stale-if-error = 60"}},
-			CacheDirectives{StaleIfError: 60},
+			CacheDirectives{StaleIfError: DeltaSeconds(60)},
 		},
 	}
 	for _, test := range tests {
@@ -359,7 +368,7 @@ func TestSetCacheControl(t *testing.T) {
 			http.Header{"Cache-Control": {"no-store, no-transform, no-cache"}},
 		},
 		{
-			CacheDirectives{OnlyIfCached: true, MaxStale: 900},
+			CacheDirectives{OnlyIfCached: true, MaxStale: DeltaSeconds(900)},
 			http.Header{"Cache-Control": {"only-if-cached, max-stale=900"}},
 		},
 		{
@@ -367,7 +376,11 @@ func TestSetCacheControl(t *testing.T) {
 			http.Header{"Cache-Control": {"must-revalidate, proxy-revalidate"}},
 		},
 		{
-			CacheDirectives{Public: true, Immutable: true, MaxAge: Just(86400)},
+			CacheDirectives{
+				Public:    true,
+				Immutable: true,
+				MaxAge:    DeltaSeconds(86400),
+			},
 			http.Header{"Cache-Control": {"public, immutable, max-age=86400"}},
 		},
 		{
@@ -385,27 +398,33 @@ func TestSetCacheControl(t *testing.T) {
 			http.Header{"Cache-Control": {`private="Set-Cookie,Request-ID"`}},
 		},
 		{
-			CacheDirectives{Private: true, StaleWhileRevalidate: 300},
+			CacheDirectives{
+				Private:              true,
+				StaleWhileRevalidate: DeltaSeconds(300),
+			},
 			http.Header{"Cache-Control": {"private, stale-while-revalidate=300"}},
 		},
 		{
-			CacheDirectives{MaxStale: -1},
+			CacheDirectives{MaxStale: Eternity},
 			http.Header{"Cache-Control": {"max-stale"}},
 		},
 		{
-			CacheDirectives{MinFresh: 900, Ext: map[string]string{"Qux": ""}},
+			CacheDirectives{
+				MinFresh: DeltaSeconds(900),
+				Ext:      map[string]string{"Qux": ""},
+			},
 			http.Header{"Cache-Control": {"min-fresh=900, Qux"}},
 		},
 		{
 			CacheDirectives{
-				StaleIfError: 1800,
+				StaleIfError: DeltaSeconds(1800),
 				Ext:          map[string]string{"bar": "baz, qux"},
 			},
 			http.Header{"Cache-Control": {`stale-if-error=1800, bar="baz, qux"`}},
 		},
 		{
 			CacheDirectives{
-				SMaxage: Just(300),
+				SMaxage: DeltaSeconds(300),
 				Ext:     map[string]string{"priority": "40"},
 			},
 			http.Header{"Cache-Control": {"s-maxage=300, priority=40"}},
