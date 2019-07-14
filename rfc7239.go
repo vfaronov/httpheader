@@ -39,9 +39,9 @@ func Forwarded(h http.Header) []ForwardedElem {
 			}
 			switch name {
 			case "for":
-				elem.For = value
+				elem.For = parseNode(value)
 			case "by":
-				elem.By = value
+				elem.By = parseNode(value)
 			case "host":
 				elem.Host = value
 			case "proto":
@@ -82,12 +82,8 @@ func buildForwarded(elems []ForwardedElem) string {
 			b.WriteString(", ")
 		}
 		var wrote bool
-		if elem.For != "" {
-			wrote = writeParam(b, wrote, "for", elem.For)
-		}
-		if elem.By != "" {
-			wrote = writeParam(b, wrote, "by", elem.By)
-		}
+		wrote = writeNode(b, wrote, "for", elem.For)
+		wrote = writeNode(b, wrote, "by", elem.By)
 		if elem.Host != "" {
 			wrote = writeParam(b, wrote, "host", elem.Host)
 		}
@@ -97,6 +93,9 @@ func buildForwarded(elems []ForwardedElem) string {
 		for name, value := range elem.Ext {
 			wrote = writeParam(b, wrote, name, value)
 		}
+		if !wrote {
+			b.WriteString("for=unknown")
+		}
 	}
 	return b.String()
 }
@@ -105,38 +104,95 @@ func buildForwarded(elems []ForwardedElem) string {
 // Standard parameters are stored in the corresponding fields;
 // any extension parameters are stored in Ext.
 type ForwardedElem struct {
-	By    string
-	For   string
+	By    Node
+	For   Node
 	Host  string
 	Proto string            // lowercased
 	Ext   map[string]string // keys lowercased
 }
 
-// ByAddr returns the IP address and port from the By field of elem.
-// If either is missing or cannot be parsed, the respective zero value is returned.
-func (elem ForwardedElem) ByAddr() (net.IP, int) {
-	return nodeAddr(elem.By)
+// A Node represents a node identifier (RFC 7239 Section 6).
+// Either IP or ObfuscatedNode may be non-zero, but not both.
+// Similarly for Port and ObfuscatedPort.
+type Node struct {
+	IP             net.IP
+	Port           int
+	ObfuscatedNode string
+	ObfuscatedPort string
 }
 
-// ForAddr returns the IP address and port from the For field of elem.
-// If either is missing or cannot be parsed, the respective zero value is returned.
-func (elem ForwardedElem) ForAddr() (net.IP, int) {
-	return nodeAddr(elem.For)
-}
-
-func nodeAddr(node string) (net.IP, int) {
-	rawIP, rawPort := node, ""
-	portPos := strings.LastIndexByte(node, ':')
-	if portPos != -1 && portPos < strings.IndexByte(node, ']') {
+func parseNode(s string) Node {
+	var node Node
+	rawIP, rawPort := s, ""
+	portPos := strings.LastIndexByte(s, ':')
+	if portPos != -1 && portPos < strings.IndexByte(s, ']') {
 		// That's not a port, that's part of the IPv6 address.
 		portPos = -1
 	}
 	if portPos != -1 {
-		rawIP, rawPort = node[:portPos], node[portPos+1:]
+		rawIP, rawPort = s[:portPos], s[portPos+1:]
 	}
 	rawIP = strings.TrimPrefix(rawIP, "[")
 	rawIP = strings.TrimSuffix(rawIP, "]")
-	ip := net.ParseIP(rawIP)
-	port, _ := strconv.Atoi(rawPort)
-	return ip, port
+	node.IP = net.ParseIP(rawIP)
+	if node.IP == nil && strings.ToLower(rawIP) != "unknown" {
+		node.ObfuscatedNode = rawIP
+	}
+	node.Port, _ = strconv.Atoi(rawPort)
+	if node.Port == 0 && rawPort != "" {
+		node.ObfuscatedPort = rawPort
+	}
+	return node
+}
+
+func writeNode(b *strings.Builder, wrote bool, name string, node Node) bool {
+	var rawIP, rawPort string
+
+	switch {
+	case node.Port != 0:
+		rawPort = strconv.Itoa(node.Port)
+	case node.ObfuscatedPort != "":
+		rawPort = node.ObfuscatedPort
+	}
+
+	switch {
+	case len(node.IP) > 0:
+		rawIP = node.IP.String()
+	case node.ObfuscatedNode != "":
+		rawIP = node.ObfuscatedNode
+	case rawPort != "":
+		rawIP = "unknown"
+	}
+
+	if rawIP == "" && rawPort == "" {
+		return wrote
+	}
+
+	ipv6 := strings.IndexByte(rawIP, ':') != -1
+	quoted := ipv6 || rawPort != ""
+
+	if wrote {
+		b.WriteByte(';')
+	}
+	b.WriteString(name)
+	b.WriteByte('=')
+	if quoted {
+		b.WriteByte('"')
+	}
+	if ipv6 {
+		b.WriteByte('[')
+	}
+	b.WriteString(rawIP)
+	if ipv6 {
+		b.WriteByte(']')
+	}
+	if rawPort != "" {
+		b.WriteByte(':')
+		b.WriteString(rawPort)
+	}
+	if quoted {
+		b.WriteByte('"')
+	}
+
+	return true
 }

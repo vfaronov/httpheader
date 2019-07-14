@@ -200,8 +200,8 @@ func TestContentDispositionRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetContentDisposition, ContentDisposition,
 		"lower token",
 		map[string]string{
-			"lower token":        "quotable | empty",
-			"lower token plus *": "quotable | UTF-8 | empty",
+			"lower token":  "quotable | empty",
+			"lower token*": "quotable | UTF-8 | empty",
 		},
 	)
 }

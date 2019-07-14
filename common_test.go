@@ -3,6 +3,7 @@ package httpheader
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -130,7 +131,12 @@ func likeExample(r *rand.Rand, ex interface{}) interface{} {
 		newV.Elem().Set(reflect.ValueOf(likeExample(r, exElem)))
 		return newV.Interface()
 	case reflect.Slice:
-		return likeSlice(r, ex)
+		switch exV.Type() {
+		case reflect.TypeOf(net.IP{}):
+			return likeIP(r, ex.(net.IP))
+		default:
+			return likeSlice(r, ex)
+		}
 	case reflect.Map:
 		return likeMap(r, ex)
 	default:
@@ -140,12 +146,16 @@ func likeExample(r *rand.Rand, ex interface{}) interface{} {
 
 func likeInt(r *rand.Rand, ex int) int {
 	switch ex {
+	case 9999:
+		return 1000 + r.Intn(9000)
 	case 999:
 		return 100 + r.Intn(900)
 	case 99:
 		return 10 + r.Intn(90)
 	case 9:
 		return r.Intn(10)
+	case 0:
+		return 0
 	default:
 		panic(fmt.Sprintf("cannot generate int like %v", ex))
 	}
@@ -171,11 +181,6 @@ func likeString(r *rand.Rand, ex string) string {
 	if exs := strings.Split(ex, " without "); len(exs) == 2 {
 		ex, without = exs[0], exs[1]
 	}
-	// like "X plus foo" = like "X" with the string "foo" appended
-	var plus string
-	if exs := strings.Split(ex, " plus "); len(exs) == 2 {
-		ex, plus = exs[0], exs[1]
-	}
 	// like "lower X" = like "X", lowercased
 	var lower bool
 	if ex1 := strings.TrimPrefix(ex, "lower "); ex1 != ex {
@@ -186,6 +191,8 @@ func likeString(r *rand.Rand, ex string) string {
 	switch ex {
 	case "token":
 		s = randString(r, tchar)
+	case "token*":
+		s = randString(r, tchar) + "*"
 	case "Header-Name":
 		s = http.CanonicalHeaderKey(randString(r, tchar))
 	case "token/token":
@@ -197,6 +204,8 @@ func likeString(r *rand.Rand, ex string) string {
 	case "URL":
 		u := randURL(r)
 		s = u.String()
+	case "_obfID":
+		s = "_" + randString(r, alnum+"._-")
 	default:
 		panic(fmt.Sprintf("cannot generate string like %q", ex))
 	}
@@ -210,7 +219,6 @@ func likeString(r *rand.Rand, ex string) string {
 		}
 	}
 	s = string(bs)
-	s += plus
 	return s
 }
 
@@ -267,6 +275,21 @@ func randURL(r *rand.Rand) url.URL {
 		RawQuery: randString(r, alnum+"&="),
 		Fragment: randString(r, alnum),
 	}
+}
+
+func likeIP(r *rand.Rand, ex net.IP) net.IP {
+	if ex == nil {
+		return nil
+	}
+	var ip net.IP
+	if r.Intn(2) == 0 {
+		ip = make(net.IP, 4)
+	} else {
+		ip = make(net.IP, 16)
+	}
+	r.Read(ip)
+	ip = net.ParseIP(ip.String()) // canonicalize
+	return ip
 }
 
 // likeStruct returns a new struct of the same type as ex,

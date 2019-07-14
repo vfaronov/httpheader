@@ -13,20 +13,20 @@ func ExampleForwarded() {
 		`for="[2001:db8::fa40]:19950";proto=http`,
 	}}
 	for _, elem := range Forwarded(header) {
-		fmt.Println(elem.ForAddr())
+		fmt.Println(elem.For.IP)
 	}
-	// Output: 192.0.2.61 0
-	// 2001:db8::fa40 19950
+	// Output: 192.0.2.61
+	// 2001:db8::fa40
 }
 
 func ExampleAddForwarded() {
 	header := http.Header{}
 	AddForwarded(header, ForwardedElem{
-		For:   "[2001:db8:cafe::17]",
+		For:   Node{IP: net.IPv4(203, 0, 113, 195)},
 		Proto: "https",
 	})
 	fmt.Print(header)
-	// Output: map[Forwarded:[for="[2001:db8:cafe::17]";proto=https]]
+	// Output: map[Forwarded:[for=203.0.113.195;proto=https]]
 }
 
 func TestForwarded(t *testing.T) {
@@ -41,19 +41,20 @@ func TestForwarded(t *testing.T) {
 		},
 		{
 			http.Header{"Forwarded": {"for=_a;"}},
-			[]ForwardedElem{{For: "_a"}},
-		},
-		{
-			http.Header{"Forwarded": {`for="_a;\"_b\"";`}},
-			[]ForwardedElem{{For: `_a;"_b"`}},
+			[]ForwardedElem{{For: Node{ObfuscatedNode: "_a"}}},
 		},
 		{
 			http.Header{"Forwarded": {"for=_a;;;by=_b"}},
-			[]ForwardedElem{{For: "_a", By: "_b"}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_a"}, By: Node{ObfuscatedNode: "_b"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {"for=_a;,;by=_b"}},
-			[]ForwardedElem{{For: "_a"}, {By: "_b"}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_a"}},
+				{By: Node{ObfuscatedNode: "_b"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {
@@ -61,8 +62,8 @@ func TestForwarded(t *testing.T) {
 			}},
 			[]ForwardedElem{
 				{
-					For:   "[2001:db8:cafe::17]:4711",
-					By:    "_Je8vvbnk5wmn",
+					For:   Node{IP: mustParseIP("2001:db8:cafe::17"), Port: 4711},
+					By:    Node{ObfuscatedNode: "_Je8vvbnk5wmn"},
 					Proto: "https",
 				},
 			},
@@ -74,16 +75,62 @@ func TestForwarded(t *testing.T) {
 			}},
 			[]ForwardedElem{
 				{
-					For: "[2001:db8:cafe::17]:4711",
+					For: Node{IP: mustParseIP("2001:db8:cafe::17"), Port: 4711},
 					Ext: map[string]string{"qux": "90121"},
 				},
 				{
-					By:    "_Je8vvbnk5wmn",
+					By:    Node{ObfuscatedNode: "_Je8vvbnk5wmn"},
 					Proto: "https",
 				},
 				{
 					Host: "example.com",
 				},
+			},
+		},
+		{
+			http.Header{"Forwarded": {`for="unknown"`}},
+			[]ForwardedElem{{}},
+		},
+		{
+			http.Header{"Forwarded": {`for=_Rrfqew8`}},
+			[]ForwardedElem{{For: Node{ObfuscatedNode: "_Rrfqew8"}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="203.0.113.10"`}},
+			[]ForwardedElem{{For: Node{IP: net.IPv4(203, 0, 113, 10)}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="[2001:db8:ae0::55]"`}},
+			[]ForwardedElem{{For: Node{IP: mustParseIP("2001:db8:ae0::55")}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="unknown:28021"`}},
+			[]ForwardedElem{{For: Node{Port: 28021}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="203.0.113.8:8080"`}},
+			[]ForwardedElem{{For: Node{IP: net.IPv4(203, 0, 113, 8), Port: 8080}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="[2001:db8:4ca::20]:5033"`}},
+			[]ForwardedElem{
+				{For: Node{IP: mustParseIP("2001:db8:4ca::20"), Port: 5033}},
+			},
+		},
+		{
+			http.Header{"Forwarded": {`for="[2001:db8:4ca::20]:5"`}},
+			[]ForwardedElem{
+				{For: Node{IP: mustParseIP("2001:db8:4ca::20"), Port: 5}},
+			},
+		},
+		{
+			http.Header{"Forwarded": {`by="Unknown:1234"`}},
+			[]ForwardedElem{{By: Node{Port: 1234}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="203.0.113.8:_ghu2"`}},
+			[]ForwardedElem{
+				{For: Node{IP: net.IPv4(203, 0, 113, 8), ObfuscatedPort: "_ghu2"}},
 			},
 		},
 
@@ -96,7 +143,10 @@ func TestForwarded(t *testing.T) {
 		},
 		{
 			http.Header{"Forwarded": {"for=_a; by=_b, for=_c"}},
-			[]ForwardedElem{{For: "_a"}, {For: "_c"}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_a"}},
+				{For: Node{ObfuscatedNode: "_c"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {"for = _a;by = _b"}},
@@ -108,15 +158,30 @@ func TestForwarded(t *testing.T) {
 		},
 		{
 			http.Header{"Forwarded": {`for=_a;by=", for=_b`}},
-			[]ForwardedElem{{For: "_a", By: ", for=_b"}},
+			[]ForwardedElem{
+				{
+					For: Node{ObfuscatedNode: "_a"},
+					By:  Node{ObfuscatedNode: ", for=_b"},
+				},
+			},
 		},
 		{
 			http.Header{"Forwarded": {`for=_a;by=", for="_b"`}},
-			[]ForwardedElem{{For: "_a", By: ", for="}},
+			[]ForwardedElem{
+				{
+					For: Node{ObfuscatedNode: "_a"},
+					By:  Node{ObfuscatedNode: ", for="},
+				},
+			},
 		},
 		{
 			http.Header{"Forwarded": {`for=_a;by="\, for=_b`}},
-			[]ForwardedElem{{For: "_a", By: ", for=_b"}},
+			[]ForwardedElem{
+				{
+					For: Node{ObfuscatedNode: "_a"},
+					By:  Node{ObfuscatedNode: ", for=_b"},
+				},
+			},
 		},
 		{
 			http.Header{"Forwarded": {
@@ -124,8 +189,8 @@ func TestForwarded(t *testing.T) {
 			}},
 			[]ForwardedElem{
 				{
-					For:   " ",
-					By:    " ",
+					For:   Node{ObfuscatedNode: " "},
+					By:    Node{ObfuscatedNode: " "},
 					Host:  " ",
 					Proto: " ",
 					Ext:   map[string]string{"qux": " "},
@@ -134,19 +199,83 @@ func TestForwarded(t *testing.T) {
 		},
 		{
 			http.Header{"Forwarded": {`for=_a by=_b, for=_c`}},
-			[]ForwardedElem{{For: "_a"}, {For: "_c"}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_a"}},
+				{For: Node{ObfuscatedNode: "_c"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {`for=_a=_b, for=_c`}},
-			[]ForwardedElem{{For: "_a"}, {For: "_c"}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_a"}},
+				{For: Node{ObfuscatedNode: "_c"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {`for;by;qux, for=_c`}},
-			[]ForwardedElem{{}, {For: "_c"}},
+			[]ForwardedElem{{}, {For: Node{ObfuscatedNode: "_c"}}},
 		},
 		{
 			http.Header{"Forwarded": {`for;=qux, for=_c`}},
-			[]ForwardedElem{{}, {For: "_c"}},
+			[]ForwardedElem{{}, {For: Node{ObfuscatedNode: "_c"}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="_a;\"_b\"";by="unknown:_c"`}},
+			[]ForwardedElem{
+				{
+					For: Node{ObfuscatedNode: `_a;"_b"`},
+					By:  Node{ObfuscatedPort: "_c"},
+				},
+			},
+		},
+		{
+			http.Header{"Forwarded": {`for=""`}},
+			[]ForwardedElem{{}},
+		},
+		{
+			http.Header{"Forwarded": {`for=______:22602`}},
+			[]ForwardedElem{{For: Node{ObfuscatedNode: "______", Port: 22602}}},
+		},
+		{
+			http.Header{"Forwarded": {`for=[2001:db8:4ca::20]:5;by=_a`}},
+			[]ForwardedElem{
+				{
+					For: Node{IP: mustParseIP("2001:db8:4ca::20"), Port: 5},
+					By:  Node{ObfuscatedNode: "_a"},
+				},
+			},
+		},
+		{
+			http.Header{"Forwarded": {`for="2001:db8:ae0::55"`}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "2001:db8:ae0:", Port: 55}},
+			},
+		},
+		{
+			http.Header{"Forwarded": {`by=":1309"`}},
+			[]ForwardedElem{{By: Node{Port: 1309}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="[2001:db8:ae0::55]:"`}},
+			[]ForwardedElem{{For: Node{IP: mustParseIP("2001:db8:ae0::55")}}},
+		},
+		{
+			http.Header{"Forwarded": {`for=":"`}},
+			[]ForwardedElem{{}},
+		},
+		{
+			http.Header{"Forwarded": {`for="203.0.113.8:"`}},
+			[]ForwardedElem{{For: Node{IP: net.IPv4(203, 0, 113, 8)}}},
+		},
+		{
+			http.Header{"Forwarded": {`for="[2001:db8:ae0::55"`}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "2001:db8:ae0:", Port: 55}},
+			},
+		},
+		{
+			http.Header{"Forwarded": {`by="2001:db8:ae0::55]"`}},
+			[]ForwardedElem{{By: Node{IP: mustParseIP("2001:db8:ae0::55")}}},
 		},
 	}
 	for _, test := range tests {
@@ -168,8 +297,8 @@ func TestSetForwarded(t *testing.T) {
 		{
 			[]ForwardedElem{
 				{
-					For:   "_a",
-					By:    "[2001:db8:ae0::55]",
+					For:   Node{ObfuscatedNode: "_a"},
+					By:    Node{IP: mustParseIP("2001:db8:ae0::55")},
 					Proto: "ABCDP",
 					Ext:   map[string]string{"foo": ""},
 				},
@@ -177,6 +306,37 @@ func TestSetForwarded(t *testing.T) {
 			http.Header{
 				"Forwarded": {`for=_a;by="[2001:db8:ae0::55]";proto=ABCDP;foo=""`},
 			},
+		},
+		{
+			[]ForwardedElem{{}, {}},
+			http.Header{"Forwarded": {"for=unknown, for=unknown"}},
+		},
+		{
+			[]ForwardedElem{{By: Node{Port: 8080}}, {}},
+			http.Header{"Forwarded": {`by="unknown:8080", for=unknown`}},
+		},
+		{
+			[]ForwardedElem{
+				{
+					For: Node{
+						IP:             net.IPv4(203, 0, 113, 70),
+						ObfuscatedNode: "_EF99AC",
+					},
+				},
+			},
+			http.Header{"Forwarded": {"for=203.0.113.70"}},
+		},
+		{
+			[]ForwardedElem{
+				{For: Node{IP: net.IPv4(203, 0, 113, 70), Port: 44831}},
+			},
+			http.Header{"Forwarded": {`for="203.0.113.70:44831"`}},
+		},
+		{
+			[]ForwardedElem{
+				{For: Node{Port: 44831, ObfuscatedPort: "_a"}},
+			},
+			http.Header{"Forwarded": {`for="unknown:44831"`}},
 		},
 	}
 	for _, test := range tests {
@@ -194,13 +354,25 @@ func TestForwardedFuzz(t *testing.T) {
 
 func TestForwardedRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetForwarded, Forwarded,
-		[]ForwardedElem{{
-			For:   "quotable",
-			By:    "quotable | empty",
-			Host:  "quotable | empty",
-			Proto: "lower quotable | empty",
-			Ext:   map[string]string{"lower token": "quotable | empty"},
-		}},
+		[]ForwardedElem{
+			{
+				For: Node{
+					IP:             net.IP{},
+					Port:           0,
+					ObfuscatedNode: "empty",
+					ObfuscatedPort: "_obfID | empty",
+				},
+				By: Node{
+					IP:             nil,
+					Port:           9999,
+					ObfuscatedNode: "_obfID | empty",
+					ObfuscatedPort: "empty",
+				},
+				Host:  "token | empty",
+				Proto: "lower token | empty",
+				Ext:   map[string]string{"lower token": "quotable | empty"},
+			},
+		},
 	)
 }
 
@@ -212,52 +384,6 @@ func BenchmarkForwarded(b *testing.B) {
 	}}
 	for i := 0; i < b.N; i++ {
 		Forwarded(header)
-	}
-}
-
-func TestForwardedElemByAddr(t *testing.T) {
-	tests := []struct {
-		value string
-		ip    net.IP
-		port  int
-	}{
-		// Valid node values.
-		{"", nil, 0},
-		{"unknown", nil, 0},
-		{"_Rrfqew8", nil, 0},
-		{"203.0.113.10", net.IPv4(203, 0, 113, 10), 0},
-		{"[2001:db8:ae0::55]", mustParseIP("2001:db8:ae0::55"), 0},
-		{"unknown:8021", nil, 8021},
-		{"______:22602", nil, 22602},
-		{"203.0.113.8:8080", net.IPv4(203, 0, 113, 8), 8080},
-		{"[2001:db8:4ca::20]:5033", mustParseIP("2001:db8:4ca::20"), 5033},
-		{"[2001:db8:4ca::20]:5", mustParseIP("2001:db8:4ca::20"), 5},
-		{"unknown:_1234", nil, 0},
-		{"203.0.113.8:_ghu2", net.IPv4(203, 0, 113, 8), 0},
-
-		// Invalid node values.
-		// Precise outputs on them are not a guaranteed part of the API.
-		// They may change as convenient for the parsing code.
-		{"2001:db8:ae0::55", nil, 55},
-		{":1309", nil, 1309},
-		{"[2001:db8:4ca::20]:", mustParseIP("2001:db8:4ca::20"), 0},
-		{":", nil, 0},
-		{"203.0.113.8:", net.IPv4(203, 0, 113, 8), 0},
-		{"[2001:db8:4ca::20", nil, 20},
-		{"2001:db8:4ca::20]", mustParseIP("2001:db8:4ca::20"), 0},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			ip, port := ForwardedElem{By: test.value}.ByAddr()
-			if !ip.Equal(test.ip) {
-				t.Errorf("parsing %q\nexpected IP: %s\nactual IP:   %s",
-					test.value, test.ip, ip)
-			}
-			if port != test.port {
-				t.Errorf("parsing %q\nexpected port: %v\nactual port:   %v",
-					test.value, test.port, port)
-			}
-		})
 	}
 }
 
