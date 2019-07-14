@@ -384,7 +384,14 @@ func TestForwardedRoundTrip(t *testing.T) {
 	)
 }
 
-func BenchmarkForwarded(b *testing.B) {
+func BenchmarkForwardedSimple(b *testing.B) {
+	header := http.Header{"Forwarded": {"for=198.51.100.67;proto=https"}}
+	for i := 0; i < b.N; i++ {
+		Forwarded(header)
+	}
+}
+
+func BenchmarkForwardedComplex(b *testing.B) {
 	header := http.Header{"Forwarded": {
 		`by=_proxyACe430bZq8g8d;for=10.41.132.82;acl="check passed"`,
 		`by="[2001:db8:ae0::55]";for=198.51.100.67;proto=https;host=example.com`,

@@ -196,7 +196,14 @@ func TestWarningRoundTrip(t *testing.T) {
 	)
 }
 
-func BenchmarkWarning(b *testing.B) {
+func BenchmarkWarningSimple(b *testing.B) {
+	header := http.Header{"Warning": {`299 - "This API is deprecated; see docs"`}}
+	for i := 0; i < b.N; i++ {
+		Warning(header)
+	}
+}
+
+func BenchmarkWarningComplex(b *testing.B) {
 	header := http.Header{"Warning": {
 		`299 api.example.com "This API is deprecated; see docs"`,
 		`214 proxy1.example.net "Tracking pixels removed"`,
@@ -426,7 +433,14 @@ func TestCacheControlFuzz(t *testing.T) {
 	checkFuzz(t, "Cache-Control", CacheControl, SetCacheControl)
 }
 
-func BenchmarkCacheControl(b *testing.B) {
+func BenchmarkCacheControlSimple(b *testing.B) {
+	header := http.Header{"Cache-Control": {"public, max-age=86400"}}
+	for i := 0; i < b.N; i++ {
+		CacheControl(header)
+	}
+}
+
+func BenchmarkCacheControlComplex(b *testing.B) {
 	header := http.Header{"Cache-Control": {
 		`private="Set-Cookie", max-age=900, s-maxage=600, stale-if-error=30`,
 		`no-transform, must-revalidate`,

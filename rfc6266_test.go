@@ -2,6 +2,7 @@ package httpheader
 
 import (
 	"fmt"
+	"mime"
 	"net/http"
 	"testing"
 )
@@ -204,4 +205,29 @@ func TestContentDispositionRoundTrip(t *testing.T) {
 			"lower token*": "quotable | UTF-8 | empty",
 		},
 	)
+}
+
+const (
+	simple  = `attachment; filename="Privet mir.txt"; filename*=UTF-8''%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%20%D0%BC%D0%B8%D1%80.txt`
+	complex = `attachment; filename="Privet mir.txt"; filename*=UTF-8''%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%20%D0%BC%D0%B8%D1%80.txt; type="text/html"; description*=UTF-8''%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%D1%81%D1%82%D0%B2%D0%B8%D0%B5`
+)
+
+func BenchmarkContentDispositionSimple(b *testing.B) {
+	header := http.Header{"Content-Disposition": {simple}}
+	for i := 0; i < b.N; i++ {
+		ContentDisposition(header)
+	}
+}
+
+func BenchmarkContentDispositionComplex(b *testing.B) {
+	header := http.Header{"Content-Disposition": {complex}}
+	for i := 0; i < b.N; i++ {
+		ContentDisposition(header)
+	}
+}
+
+func BenchmarkStdlibContentDispositionSimple(b *testing.B) { // for comparison
+	for i := 0; i < b.N; i++ {
+		mime.ParseMediaType(simple)
+	}
 }
