@@ -6,51 +6,58 @@ import (
 )
 
 // ContentDisposition parses the Content-Disposition header from h (RFC 6266),
-// returning the disposition type and a map of disposition parameters.
-// The type and the map keys (but not values) are lowercased.
-// Parameters whose names end in an asterisk, such as 'filename*',
-// are automatically decoded from RFC 8187 encoding, but their UTF-8 is not
-// validated.
-func ContentDisposition(h http.Header) (dtype string, params map[string]string) {
-	dtype, params, _ = consumeParameterized(h.Get("Content-Disposition"))
-	for name, value := range params {
-		if strings.HasSuffix(name, "*") {
-			decoded, err := decodeExtValue(value)
-			if err != nil {
-				continue
+// returning the disposition type, the value of the 'filename' parameter (if any),
+// and a map of any other parameters, with keys (but not values) lowercased.
+//
+// Any 'filename*' parameter is decoded from RFC 8187 encoding, and overrides
+// 'filename'. Similarly for any other parameter whose name ends in an asterisk.
+// UTF-8 is not validated in such strings.
+func ContentDisposition(h http.Header) (dtype, filename string, params map[string]string) {
+	v := h.Get("Content-Disposition")
+	dtype, v = consumeItem(v)
+	dtype = strings.ToLower(dtype)
+ParamsLoop:
+	for {
+		var name, value string
+		name, value, v = consumeParam(v)
+		switch name {
+		case "":
+			break ParamsLoop
+		case "filename":
+			if filename == "" { // not set from 'filename*' yet
+				filename = value
 			}
-			params[name] = decoded
+		case "filename*":
+			if decoded, err := decodeExtValue(value); err == nil {
+				filename = decoded
+			}
+		default:
+			params = insertVariform(params, name, value)
 		}
 	}
 	return
 }
 
 // SetContentDisposition replaces the Content-Disposition header in h.
-// Parameters whose names end in an asterisk, such as 'filename*',
-// are automatically encoded into RFC 8187 encoding; their value
-// must already be valid UTF-8.
-func SetContentDisposition(h http.Header, dtype string, params map[string]string) {
+//
+// If filename is not empty, it must be valid UTF-8, which is serialized into
+// a 'filename' parameter in plain ASCII, or a 'filename*' parameter in RFC 8187
+// encoding, or both, depending on what characters it contains.
+//
+// Similarly, if params contains a 'qux' or 'qux*' key, it will be serialized into
+// a 'qux' and/or 'qux*' parameter depending on its contents; the asterisk
+// in the key is ignored. Any 'filename' or 'filename*' in params is skipped.
+func SetContentDisposition(h http.Header, dtype, filename string, params map[string]string) {
 	b := &strings.Builder{}
 	b.WriteString(dtype)
-	// RFC 6266 Appendix D: "When a 'filename' parameter is included as a fallback
-	// [...], 'filename' should occur first, due to parsing problems in some
-	// existing implementations."
-	if filename, ok := params["filename"]; ok {
-		b.WriteString("; filename=")
-		writeTokenOrQuoted(b, filename)
+	if filename != "" {
+		writeVariform(b, "filename", filename)
 	}
 	for name, value := range params {
-		if name == "filename" { // handled above
+		if strings.ToLower(strings.TrimSuffix(name, "*")) == "filename" {
 			continue
 		}
-		b.WriteString("; ")
-		b.WriteString(name)
-		b.WriteString("=")
-		if strings.HasSuffix(name, "*") {
-			writeExtValue(b, value)
-		} else {
-			writeTokenOrQuoted(b, value)
-		}
+		writeVariform(b, name, value)
 	}
 	h.Set("Content-Disposition", b.String())
 }

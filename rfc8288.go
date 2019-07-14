@@ -120,17 +120,7 @@ LinksLoop:
 				seenMedia = true
 
 			default: // extension attributes
-				if link.Ext == nil {
-					link.Ext = make(map[string]string)
-				}
-				if strings.HasSuffix(name, "*") {
-					plainName := name[:len(name)-1]
-					if decoded, err := decodeExtValue(value); err == nil {
-						link.Ext[plainName] = decoded
-					}
-				} else if link.Ext[name] == "" { // not filled in from 'name*' yet
-					link.Ext[name] = value
-				}
+				link.Ext = insertVariform(link.Ext, name, value)
 			}
 		}
 
@@ -217,70 +207,4 @@ func buildLink(links []LinkElem) string {
 		}
 	}
 	return b.String()
-}
-
-func writeVariform(b *strings.Builder, name, value string) {
-	// For the title attribute, as well as for extension attributes, we can choose
-	// between three ways to represent value on the wire:
-	//
-	//   name=value                      -- token form
-	//   name="value"                    -- quoted-string form
-	//   name*=[RFC 8187 encoded value]  -- ext-value form
-	//
-	// (also, RFC 8288 allows omitting an empty value altogether, but RFC 5987
-	// didn't, so we avoid it).
-	//
-	// Which form to use depends on what characters value consists of.
-	tokenOK, quotedSafe, quotedOK := classify(value)
-
-	b.WriteString("; ")
-	b.WriteString(name)
-
-	switch {
-	// RFC 8288 Section 3: "Previous definitions of the Link header did not equate
-	// the token and quoted-string forms explicitly; the title parameter was
-	// always quoted, and the hreflang parameter was always a token. Senders
-	// wishing to maximize interoperability will send them in those forms."
-	case tokenOK && name == "title":
-		b.WriteString(`="`)
-		b.WriteString(value)
-		b.WriteString(`"`)
-
-	// Token is simplest and safest. Use it if we can.
-	case tokenOK:
-		b.WriteString("=")
-		b.WriteString(value)
-
-	// Many implementations do not process quoted-strings correctly: they are
-	// confused by any commas, semicolons, and/or (escaped) double quotes inside.
-	// Here are two examples of such naive parsers just off the top of my head:
-	//
-	//   https://github.com/tomnomnom/linkheader/tree/02ca5825
-	//   https://github.com/kennethreitz/requests/blob/4983a9bd/requests/utils.py
-	//
-	// When the string is entirely ASCII-printable and without such problematic
-	// characters, we can send it as a quoted-string and it will usually be OK.
-	// No need to send ext-value in this case.
-	case quotedSafe:
-		b.WriteString("=")
-		writeQuoted(b, value)
-
-	// Otherwise, it's best to send an ext-value. Syntactically, the encoded
-	// ext-value is just a token, so most implementations are OK with it
-	// (at least the two above are).
-	default:
-		b.WriteString("*=")
-		writeExtValue(b, value)
-		// However, few implementations actually decode ext-values; certainly fewer
-		// than parse quoted-strings correctly. So if a quoted-string can fit
-		// the value at all, sending it as well might help. We send it after
-		// the ext-value form, so that the broken parsers will at least get
-		// the ext-value right and report it to the application for possible use.
-		if quotedOK {
-			b.WriteString("; ")
-			b.WriteString(name)
-			b.WriteString("=")
-			writeQuoted(b, value)
-		}
-	}
 }

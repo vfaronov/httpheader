@@ -261,3 +261,86 @@ func consumeAgent(v string) (agent, newv string) {
 	}
 	return consumeItem(v)
 }
+
+// insertVariform adds the given 'name=value' pair to params, automatically
+// initializing params if nil, and decoding 'name*=ext-value' from RFC 8187,
+// and returns the new params.
+func insertVariform(params map[string]string, name, value string) map[string]string {
+	if params == nil {
+		params = make(map[string]string)
+	}
+	if strings.HasSuffix(name, "*") {
+		plainName := name[:len(name)-1]
+		if decoded, err := decodeExtValue(value); err == nil {
+			params[plainName] = decoded
+		}
+	} else if params[name] == "" { // not filled in from 'name*' yet
+		params[name] = value
+	}
+	return params
+}
+
+// writeVariform encodes the parameter with the given name and value into
+// one or two of the forms name=token, name="quoted-string" and/or name*=ext-value,
+// depending on value, and writes them to b.
+func writeVariform(b *strings.Builder, name, value string) {
+	tokenOK, quotedSafe, quotedOK := classify(value)
+	b.WriteString("; ")
+	b.WriteString(name)
+	switch {
+	// Token is simplest and safest. Use it if we can. But RFC 8288 Section 3 says:
+	// "Previous definitions of the Link header did not equate the token and
+	// quoted-string forms explicitly; the title parameter was always quoted, and
+	// the hreflang parameter was always a token. Senders wishing to maximize
+	// interoperability will send them in those forms."
+	case tokenOK && name == "title":
+		b.WriteString(`="`)
+		b.WriteString(value)
+		b.WriteString(`"`)
+
+	case tokenOK:
+		b.WriteString("=")
+		b.WriteString(value)
+
+	// Many applications do not process quoted-strings correctly: they are
+	// confused by any commas, semicolons, and/or (escaped) double quotes inside.
+	// Here are just two random examples of such naive parsers for the Link header:
+	//
+	//   https://github.com/tomnomnom/linkheader/tree/02ca5825
+	//   https://github.com/kennethreitz/requests/blob/4983a9bd/requests/utils.py
+	//
+	// When the value is without such problematic characters, we can send it
+	// as a quoted-string and avoid the ext-value.
+	case quotedSafe:
+		b.WriteString("=")
+		writeQuoted(b, value)
+
+	// When the value fits into a quoted-string but does contain semicolons
+	// and such, we send both the quoted-string form and the ext-value form,
+	// so that even if a parser barfs on the semicolons, it might still get
+	// the ext-value right (which should look like a normal token to it)
+	// and report it to the application for possible use. By this logic,
+	// the ext-value should come first. However, RFC 6266 Appendix D recommends
+	// the reverse order for Content-Disposition filename in particular.
+	case quotedOK && name == "filename":
+		b.WriteByte('=')
+		writeQuoted(b, value)
+		b.WriteString("; filename*=")
+		writeExtValue(b, value)
+
+	case quotedOK:
+		b.WriteString("*=")
+		writeExtValue(b, value)
+		b.WriteString("; ")
+		b.WriteString(name)
+		b.WriteByte('=')
+		writeQuoted(b, value)
+
+	// Finally, if the value contains bytes that are not OK for quoted-string
+	// at all (including obs-text, which in general is likely to be interpreted
+	// as ISO-8859-1), we send only the ext-value.
+	default:
+		b.WriteString("*=")
+		writeExtValue(b, value)
+	}
+}
