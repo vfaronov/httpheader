@@ -58,6 +58,20 @@ func skipWS(v string) string {
 	return v
 }
 
+// consumeTo returns any text from v up to (and possibly including) the first
+// occurrence of delim, and the rest of v. If delim does not occur in v,
+// it consumes the entire v.
+func consumeTo(v string, delim byte, including bool) (text, newv string) {
+	pos := strings.IndexByte(v, delim)
+	if pos == -1 {
+		return v, ""
+	}
+	if including {
+		return v[:pos+1], v[pos+1:]
+	}
+	return v[:pos], v[pos+1:]
+}
+
 func consumeQuoted(v string) (text, newv string) {
 	return consumeDelimited(v, '"', '"')
 }
@@ -149,23 +163,18 @@ func consumeItemOrQuoted(v string) (text, newv string) {
 	return consumeItem(v)
 }
 
-func writeTokenOrQuoted(b *strings.Builder, s string) {
-	if isToken(s) {
+func write(b *strings.Builder, ss ...string) {
+	for _, s := range ss {
 		b.WriteString(s)
-	} else {
-		writeQuoted(b, s)
 	}
 }
 
-func consumeParameterized(v string) (
-	item string,
-	params map[string]string,
-	newv string,
-) {
-	item, v = consumeItem(v)
-	item = strings.ToLower(item)
-	params, v = consumeParams(v)
-	return item, params, v
+func writeTokenOrQuoted(b *strings.Builder, s string) {
+	if isToken(s) {
+		write(b, s)
+	} else {
+		writeQuoted(b, s)
+	}
 }
 
 func consumeParams(v string) (params map[string]string, newv string) {
@@ -201,22 +210,15 @@ func consumeParam(v string) (name, value, newv string) {
 	return name, value, v
 }
 
-func writeParameterized(b *strings.Builder, item string, params map[string]string) {
-	b.WriteString(item)
-	for name, value := range params {
-		writeParam(b, true, name, value)
-	}
-}
-
 func writeDirective(b *strings.Builder, wrote bool, name, value string) bool {
 	// The wrote flag controls when to output the first comma.
 	// See SetCacheControl for example of its usage.
 	if wrote {
-		b.WriteString(", ")
+		write(b, ", ")
 	}
-	b.WriteString(name)
+	write(b, name)
 	if value != "" {
-		b.WriteString("=")
+		write(b, "=")
 		writeTokenOrQuoted(b, value)
 	}
 	return true
@@ -226,40 +228,27 @@ func writeParam(b *strings.Builder, wrote bool, name, value string) bool {
 	// The wrote flag controls when to output the first semicolon.
 	// See buildForwarded for example of its usage.
 	if wrote {
-		b.WriteString(";")
+		write(b, ";")
 	}
-	b.WriteString(name)
-	b.WriteString("=")
+	write(b, name, "=")
 	writeTokenOrQuoted(b, value)
 	return true
 }
 
-func writeNullableParams(b *strings.Builder, params map[string]string) {
+func writeParams(b *strings.Builder, params map[string]string) {
 	for name, value := range params {
-		b.WriteString(";")
-		b.WriteString(name)
-		if value != "" {
-			b.WriteString("=")
-			writeTokenOrQuoted(b, value)
-		}
+		writeParam(b, true, name, value)
 	}
 }
 
-func consumeAgent(v string) (agent, newv string) {
-	// RFC 7230 received-by and RFC 7234 warn-agent. This is tricky because
-	// it can contain commas, semicolons, equal signs (see test cases)
-	// or even be empty, if you read the grammar literally (reg-name may be empty).
-	// The reg-name cases are too much for me right now, but it's easy to handle
-	// the IP-Literal case: it's delimited by brackets and never contains brackets.
-	if peek(v) == '[' {
-		if end := strings.IndexByte(v, ']'); end >= 0 {
-			var maybePort string
-			maybePort, newv = consumeItem(v[end+1:])
-			agent = v[:end+1+len(maybePort)]
-			return
+func writeNullableParams(b *strings.Builder, params map[string]string) {
+	for name, value := range params {
+		write(b, ";", name)
+		if value != "" {
+			write(b, "=")
+			writeTokenOrQuoted(b, value)
 		}
 	}
-	return consumeItem(v)
 }
 
 // insertVariform adds the given 'name=value' pair to params, automatically
@@ -285,8 +274,7 @@ func insertVariform(params map[string]string, name, value string) map[string]str
 // depending on value, and writes them to b.
 func writeVariform(b *strings.Builder, name, value string) {
 	tokenOK, quotedSafe, quotedOK := classify(value)
-	b.WriteString("; ")
-	b.WriteString(name)
+	write(b, "; ", name)
 	switch {
 	// Token is simplest and safest. Use it if we can. But RFC 8288 Section 3 says:
 	// "Previous definitions of the Link header did not equate the token and
@@ -294,13 +282,10 @@ func writeVariform(b *strings.Builder, name, value string) {
 	// the hreflang parameter was always a token. Senders wishing to maximize
 	// interoperability will send them in those forms."
 	case tokenOK && name == "title":
-		b.WriteString(`="`)
-		b.WriteString(value)
-		b.WriteString(`"`)
+		write(b, `="`, value, `"`)
 
 	case tokenOK:
-		b.WriteString("=")
-		b.WriteString(value)
+		write(b, "=", value)
 
 	// Many applications do not process quoted-strings correctly: they are
 	// confused by any commas, semicolons, and/or (escaped) double quotes inside.
@@ -312,7 +297,7 @@ func writeVariform(b *strings.Builder, name, value string) {
 	// When the value is without such problematic characters, we can send it
 	// as a quoted-string and avoid the ext-value.
 	case quotedSafe:
-		b.WriteString("=")
+		write(b, "=")
 		writeQuoted(b, value)
 
 	// When the value fits into a quoted-string but does contain semicolons
@@ -323,24 +308,22 @@ func writeVariform(b *strings.Builder, name, value string) {
 	// the ext-value should come first. However, RFC 6266 Appendix D recommends
 	// the reverse order for Content-Disposition filename in particular.
 	case quotedOK && name == "filename":
-		b.WriteByte('=')
+		write(b, "=")
 		writeQuoted(b, value)
-		b.WriteString("; filename*=")
+		write(b, "; filename*=")
 		writeExtValue(b, value)
 
 	case quotedOK:
-		b.WriteString("*=")
+		write(b, "*=")
 		writeExtValue(b, value)
-		b.WriteString("; ")
-		b.WriteString(name)
-		b.WriteByte('=')
+		write(b, "; ", name, "=")
 		writeQuoted(b, value)
 
 	// Finally, if the value contains bytes that are not OK for quoted-string
 	// at all (including obs-text, which in general is likely to be interpreted
 	// as ISO-8859-1), we send only the ext-value.
 	default:
-		b.WriteString("*=")
+		write(b, "*=")
 		writeExtValue(b, value)
 	}
 }

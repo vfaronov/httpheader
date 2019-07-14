@@ -91,6 +91,12 @@ func TestContentDisposition(t *testing.T) {
 			http.Header{"Content-Disposition": {"foo;bar*=UTF-8''b%c3%a1z;bar=baz"}},
 			"foo", "", map[string]string{"bar": "báz"},
 		},
+		{
+			// Strange though it may look, this is a valid ext-value, and it
+			// overrides the plain filename.
+			http.Header{"Content-Disposition": {"attachment; filename=hello.txt; filename*=UTF-8''"}},
+			"attachment", "", nil,
+		},
 
 		// Invalid headers.
 		// Precise outputs on them are not a guaranteed part of the API.

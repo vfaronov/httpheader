@@ -66,9 +66,9 @@ func buildVary(names map[string]bool) string {
 			continue
 		}
 		if b.Len() > 0 {
-			b.WriteString(", ")
+			write(b, ", ")
 		}
-		b.WriteString(name)
+		write(b, name)
 	}
 	return b.String()
 }
@@ -148,15 +148,14 @@ func serializeProducts(products []Product) string {
 	b := &strings.Builder{}
 	for i, product := range products {
 		if i > 0 {
-			b.WriteString(" ")
+			write(b, " ")
 		}
-		b.WriteString(product.Name)
+		write(b, product.Name)
 		if product.Version != "" {
-			b.WriteString("/")
-			b.WriteString(product.Version)
+			write(b, "/", product.Version)
 		}
 		if product.Comment != "" {
-			b.WriteString(" ")
+			write(b, " ")
 			writeComment(b, product.Comment)
 		}
 	}
@@ -172,29 +171,30 @@ func RetryAfter(h http.Header) time.Time {
 	if v == "" {
 		return time.Time{}
 	}
-	switch v[0] {
-	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // delay-seconds
-		seconds, err := strconv.Atoi(v)
-		if err != nil {
-			return time.Time{}
-		}
-		// Strictly speaking, RFC 7231 says "number of seconds to delay
-		// after the response is received", not after it was originated (Date),
-		// but the response may have been stored or processed for a long time
-		// before being fed to us, so Date might even be closer than Now().
-		date, err := http.ParseTime(h.Get("Date"))
-		if err != nil {
-			date = time.Now()
-		}
-		return date.Add(time.Duration(seconds) * time.Second)
 
-	default: // HTTP-date
+	if v[0] < '0' || '9' < v[0] {
+		// HTTP-date
 		date, err := http.ParseTime(v)
 		if err != nil {
 			return time.Time{}
 		}
 		return date
 	}
+
+	// delay-seconds
+	seconds, err := strconv.Atoi(v)
+	if err != nil {
+		return time.Time{}
+	}
+	// Strictly speaking, RFC 7231 says "number of seconds to delay
+	// after the response is received", not after it was originated (Date),
+	// but the response may have been stored or processed for a long time
+	// before being fed to us, so Date might even be closer than Now().
+	date, err := http.ParseTime(h.Get("Date"))
+	if err != nil {
+		date = time.Now()
+	}
+	return date.Add(time.Duration(seconds) * time.Second)
 }
 
 // SetRetryAfter replaces the Retry-After header in h.
@@ -206,14 +206,18 @@ func SetRetryAfter(h http.Header, after time.Time) {
 // returning the media type/subtype and any parameters. The type/subtype
 // and parameter names (but not values) are lowercased.
 func ContentType(h http.Header) (mtype string, params map[string]string) {
-	mtype, params, _ = consumeParameterized(h.Get("Content-Type"))
+	v := h.Get("Content-Type")
+	mtype, v = consumeItem(v)
+	mtype = strings.ToLower(mtype)
+	params, v = consumeParams(v)
 	return
 }
 
 // SetContentType replaces the Content-Type header in h.
 func SetContentType(h http.Header, mtype string, params map[string]string) {
 	b := &strings.Builder{}
-	writeParameterized(b, mtype, params)
+	write(b, mtype)
+	writeParams(b, params)
 	h.Set("Content-Type", b.String())
 }
 
@@ -236,14 +240,14 @@ func Accept(h http.Header) []AcceptElem {
 		elem.Type, v = consumeItem(v)
 		elem.Type = strings.ToLower(elem.Type)
 		afterQ := false
+	ParamsLoop:
 		for {
 			var name, value string
 			name, value, v = consumeParam(v)
-			if name == "" {
-				break
-			}
-			// 'q' separates media type parameters from extension parameters.
 			switch {
+			case name == "":
+				break ParamsLoop
+			// 'q' separates media type parameters from extension parameters.
 			case name == "q":
 				qvalue, _ := strconv.ParseFloat(value, 32)
 				elem.Q = float32(qvalue)
@@ -277,14 +281,15 @@ func SetAccept(h http.Header, elems []AcceptElem) {
 	b := &strings.Builder{}
 	for i, elem := range elems {
 		if i > 0 {
-			b.WriteString(", ")
+			write(b, ", ")
 		}
-		writeParameterized(b, elem.Type, elem.Params)
+		write(b, elem.Type)
+		writeParams(b, elem.Params)
 		if elem.Q != 1 || len(elem.Ext) > 0 {
-			b.WriteString(";q=")
-			// "A sender of qvalue MUST NOT generate more than three digits
-			// after the decimal point."
-			b.WriteString(strconv.FormatFloat(float64(elem.Q), 'g', 3, 32))
+			write(b, ";q=",
+				// "A sender of qvalue MUST NOT generate more than three digits
+				// after the decimal point."
+				strconv.FormatFloat(float64(elem.Q), 'g', 3, 32))
 		}
 		writeNullableParams(b, elem.Ext)
 	}
@@ -297,10 +302,7 @@ func SetAccept(h http.Header, elems []AcceptElem) {
 // not considered. If nothing matches mediaType, a zero AcceptElem is returned.
 func MatchAccept(accept []AcceptElem, mediaType string) AcceptElem {
 	mediaType = strings.ToLower(mediaType)
-	prefix := mediaType
-	if pos := strings.IndexByte(mediaType, '/'); pos > 0 {
-		prefix = mediaType[:pos+1] // "text/plain" -> "text/"
-	}
+	prefix, _ := consumeTo(mediaType, '/', true) // "text/plain" -> "text/"
 	best, bestPrecedence := AcceptElem{}, 0
 	for _, elem := range accept {
 		if len(elem.Params) > 0 {

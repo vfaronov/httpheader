@@ -17,27 +17,20 @@ type WarningElem struct {
 }
 
 // Warning parses the Warning header from h (RFC 7234 Section 5.5).
-//
-// BUG(vfaronov): Incorrectly parses some extravagant values of uri-host
-// that do not occur in practice but are theoretically admitted by RFC 3986.
 func Warning(h http.Header) []WarningElem {
 	var elems []WarningElem
 	for v, vs := iterElems("", h["Warning"]); v != ""; v, vs = iterElems(v, vs) {
 		var elem WarningElem
 		var codeStr string
-		codeStr, v = consumeItem(v)
+		codeStr, v = consumeTo(v, ' ', false)
 		elem.Code, _ = strconv.Atoi(codeStr)
-		v = skipWS(v)
-		elem.Agent, v = consumeAgent(v)
-		v = skipWS(v)
+		elem.Agent, v = consumeTo(v, ' ', false)
 		elem.Text, v = consumeQuoted(v)
 		v = skipWS(v)
 		if peek(v) == '"' {
-			nextQuote := strings.IndexByte(v[1:], '"')
-			if nextQuote > 0 {
-				elem.Date, _ = http.ParseTime(v[1 : nextQuote+1])
-				v = v[nextQuote+1:]
-			}
+			var dateStr string
+			dateStr, v = consumeTo(v[1:], '"', false)
+			elem.Date, _ = http.ParseTime(dateStr)
 		}
 		elems = append(elems, elem)
 	}
@@ -65,20 +58,16 @@ func buildWarning(elems []WarningElem) string {
 	b := &strings.Builder{}
 	for i, elem := range elems {
 		if i > 0 {
-			b.WriteString(", ")
+			write(b, ", ")
 		}
-		b.WriteString(strconv.Itoa(elem.Code))
-		b.WriteString(" ")
+		write(b, strconv.Itoa(elem.Code), " ")
 		if elem.Agent == "" {
 			elem.Agent = "-"
 		}
-		b.WriteString(elem.Agent)
-		b.WriteString(" ")
+		write(b, elem.Agent, " ")
 		writeQuoted(b, elem.Text)
 		if !elem.Date.IsZero() {
-			b.WriteString(` "`)
-			b.WriteString(elem.Date.Format(http.TimeFormat))
-			b.WriteString(`"`)
+			write(b, ` "`, elem.Date.Format(http.TimeFormat), `"`)
 		}
 	}
 	return b.String()
@@ -240,18 +229,14 @@ func SetCacheControl(h http.Header, cc CacheDirectives) {
 		// "A sender SHOULD NOT generate the token form"
 		wrote = writeDirective(b, wrote, "private", "")
 		if !cc.Private {
-			b.WriteString(`="`)
-			b.WriteString(strings.Join(cc.PrivateHeaders, ","))
-			b.WriteString(`"`)
+			write(b, `="`, strings.Join(cc.PrivateHeaders, ","), `"`)
 		}
 	}
 	if cc.NoCache || len(cc.NoCacheHeaders) > 0 {
 		// "A sender SHOULD NOT generate the token form"
 		wrote = writeDirective(b, wrote, "no-cache", "")
 		if !cc.NoCache {
-			b.WriteString(`="`)
-			b.WriteString(strings.Join(cc.NoCacheHeaders, ","))
-			b.WriteString(`"`)
+			write(b, `="`, strings.Join(cc.NoCacheHeaders, ","), `"`)
 		}
 	}
 	if cc.MaxAge.ok {
@@ -284,7 +269,7 @@ func SetCacheControl(h http.Header, cc CacheDirectives) {
 	for name, value := range cc.Ext {
 		wrote = writeDirective(b, wrote, name, value)
 	}
-	if b.Len() == 0 {
+	if !wrote {
 		h.Del("Cache-Control")
 		return
 	}

@@ -65,7 +65,7 @@ func buildForwarded(elems []ForwardedElem) string {
 	b := &strings.Builder{}
 	for i, elem := range elems {
 		if i > 0 {
-			b.WriteString(", ")
+			write(b, ", ")
 		}
 		var wrote bool
 		wrote = writeNode(b, wrote, "for", elem.For)
@@ -80,7 +80,7 @@ func buildForwarded(elems []ForwardedElem) string {
 			wrote = writeParam(b, wrote, name, value)
 		}
 		if !wrote {
-			b.WriteString("for=unknown")
+			write(b, "for=unknown")
 		}
 	}
 	return b.String()
@@ -158,26 +158,24 @@ func writeNode(b *strings.Builder, wrote bool, name string, node Node) bool {
 	quoted := ipv6 || rawPort != ""
 
 	if wrote {
-		b.WriteByte(';')
+		write(b, ";")
 	}
-	b.WriteString(name)
-	b.WriteByte('=')
+	write(b, name, "=")
 	if quoted {
-		b.WriteByte('"')
+		write(b, `"`)
 	}
 	if ipv6 {
-		b.WriteByte('[')
+		write(b, "[")
 	}
-	b.WriteString(rawIP)
+	write(b, rawIP)
 	if ipv6 {
-		b.WriteByte(']')
+		write(b, "]")
 	}
 	if rawPort != "" {
-		b.WriteByte(':')
-		b.WriteString(rawPort)
+		write(b, ":", rawPort)
 	}
 	if quoted {
-		b.WriteByte('"')
+		write(b, `"`)
 	}
 
 	return true

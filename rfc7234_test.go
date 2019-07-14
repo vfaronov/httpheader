@@ -119,13 +119,9 @@ func TestWarning(t *testing.T) {
 			},
 		},
 		{
-			// This is a valid warn-agent, per uri-host -> reg-name -> sub-delims,
-			// but we currently don't parse it. This is a documented bug.
+			// This is a valid warn-agent, per uri-host -> reg-name -> sub-delims.
 			http.Header{"Warning": {`214 funky,reg-name "WAT"`}},
-			[]WarningElem{
-				{214, "funky", "", time.Time{}},
-				{0, `"WAT"`, "", time.Time{}},
-			},
+			[]WarningElem{{214, "funky,reg-name", "WAT", time.Time{}}},
 		},
 
 		// Invalid headers.
@@ -145,19 +141,16 @@ func TestWarning(t *testing.T) {
 		},
 		{
 			http.Header{"Warning": {`299  - "two spaces"`}},
-			[]WarningElem{{299, "-", "two spaces", time.Time{}}},
+			[]WarningElem{{299, "", "", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": {`?????,299 - "good"`}},
-			[]WarningElem{
-				{0, "", "", time.Time{}},
-				{299, "-", "good", time.Time{}},
-			},
+			[]WarningElem{{0, "-", "good", time.Time{}}},
 		},
 		{
 			http.Header{"Warning": {`299  bad, 299 - "good"`}},
 			[]WarningElem{
-				{299, "bad", "", time.Time{}},
+				{299, "", "", time.Time{}},
 				{299, "-", "good", time.Time{}},
 			},
 		},

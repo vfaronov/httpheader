@@ -49,7 +49,7 @@ ParamsLoop:
 // in the key is ignored. Any 'filename' or 'filename*' in params is skipped.
 func SetContentDisposition(h http.Header, dtype, filename string, params map[string]string) {
 	b := &strings.Builder{}
-	b.WriteString(dtype)
+	write(b, dtype)
 	if filename != "" {
 		writeVariform(b, "filename", filename)
 	}

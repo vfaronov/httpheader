@@ -50,7 +50,7 @@ func TestIfMatch(t *testing.T) {
 		},
 		{
 			http.Header{"If-Match": {`"foo`, `bar", baz`, `"`, `W/"qux`, `W/`}},
-			[]EntityTag{`bar"`, `baz`},
+			[]EntityTag{`"foo`, `bar"`, `baz`, `"`, `W/"qux`},
 		},
 	}
 	for _, test := range tests {

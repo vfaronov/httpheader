@@ -25,7 +25,7 @@ func Via(h http.Header) []ViaElem {
 			elem.ReceivedProto = "HTTP/" + elem.ReceivedProto
 		}
 		v = skipWS(v)
-		elem.ReceivedBy, v = consumeAgent(v)
+		elem.ReceivedBy, v = consumeReceivedBy(v)
 		v = skipWS(v)
 		if peek(v) == '(' {
 			elem.Comment, v = consumeComment(v)
@@ -33,6 +33,23 @@ func Via(h http.Header) []ViaElem {
 		elems = append(elems, elem)
 	}
 	return elems
+}
+
+func consumeReceivedBy(v string) (by, newv string) {
+	// This is tricky because received-by can contain commas, semicolons, equal
+	// signs (see test cases) or even be empty, if you read the grammar literally
+	// (reg-name may be empty). The reg-name cases are too much for me right now,
+	// but it's easy to handle the IP-Literal case: it's delimited by brackets
+	// and never contains brackets.
+	if peek(v) == '[' {
+		if end := strings.IndexByte(v, ']'); end >= 0 {
+			var maybePort string
+			maybePort, newv = consumeItem(v[end+1:])
+			by = v[:end+1+len(maybePort)]
+			return
+		}
+	}
+	return consumeItem(v)
 }
 
 // SetVia replaces the Via header in h. See also AddVia.
@@ -56,13 +73,12 @@ func buildVia(elems []ViaElem) string {
 	b := &strings.Builder{}
 	for i, elem := range elems {
 		if i > 0 {
-			b.WriteString(", ")
+			write(b, ", ")
 		}
-		b.WriteString(strings.TrimPrefix(elem.ReceivedProto, "HTTP/"))
-		b.WriteString(" ")
-		b.WriteString(elem.ReceivedBy)
+		write(b, strings.TrimPrefix(elem.ReceivedProto, "HTTP/"),
+			" ", elem.ReceivedBy)
 		if elem.Comment != "" {
-			b.WriteString(" ")
+			write(b, " ")
 			writeComment(b, elem.Comment)
 		}
 	}

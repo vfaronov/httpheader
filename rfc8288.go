@@ -41,11 +41,7 @@ LinksLoop:
 		if v[0] != '<' {
 			continue
 		}
-		pos := strings.IndexByte(v, '>')
-		if pos == -1 {
-			continue
-		}
-		rawTarget, v = v[1:pos], v[pos+1:]
+		rawTarget, v = consumeTo(v[1:], '>', false)
 		link.Target, err = url.Parse(rawTarget)
 		if err != nil {
 			continue
@@ -167,33 +163,26 @@ func buildLink(links []LinkElem) string {
 	b := &strings.Builder{}
 	for i, link := range links {
 		if i > 0 {
-			b.WriteString(", ")
+			write(b, ", ")
 		}
-		b.WriteString("<")
-		b.WriteString(link.Target.String())
-		b.WriteString(">")
+		write(b, "<", link.Target.String(), ">")
 		if link.Anchor != nil {
-			b.WriteString(`; anchor="`)
-			b.WriteString(link.Anchor.String())
-			b.WriteString(`"`)
+			write(b, `; anchor="`, link.Anchor.String(), `"`)
 		}
 		// "The rel parameter MUST be present".
-		b.WriteString("; rel=")
+		write(b, "; rel=")
 		writeTokenOrQuoted(b, link.Rel)
 		if link.Title != "" {
 			writeVariform(b, "title", link.Title)
 		}
 		if link.Type != "" {
-			b.WriteString(`; type="`)
-			b.WriteString(link.Type)
-			b.WriteString(`"`)
+			write(b, `; type="`, link.Type, `"`)
 		}
 		for _, lang := range link.HrefLang {
-			b.WriteString("; hreflang=")
-			b.WriteString(lang)
+			write(b, "; hreflang=", lang)
 		}
 		if link.Media != "" {
-			b.WriteString("; media=")
+			write(b, "; media=")
 			writeTokenOrQuoted(b, link.Media)
 		}
 		for name, value := range link.Ext {

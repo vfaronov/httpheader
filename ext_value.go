@@ -11,19 +11,19 @@ import (
 // UTF-8 obtained after percent-decoding is not validated.
 // Language tags are ignored. ISO-8859-1 is not supported.
 func decodeExtValue(v string) (string, error) {
-	sep1 := strings.IndexByte(v, '\'')
-	if sep1 == -1 {
+	var charset, pctEncoded string
+	charset, v = consumeTo(v, '\'', false)
+	if charset == "" {
 		return "", errors.New("bad ext-value: no apostrophe")
 	}
-	sep2 := sep1 + 1 + strings.IndexByte(v[sep1+1:], '\'')
-	if sep2 == sep1 {
-		return "", errors.New("bad ext-value: no second apostrophe")
-	}
-	charset := strings.ToLower(v[:sep1])
+	charset = strings.ToLower(charset)
 	if charset != "utf-8" {
 		return "", fmt.Errorf("bad ext-value: unsupported charset %s", charset)
 	}
-	pctEncoded := v[sep2+1:]
+	_, pctEncoded = consumeTo(v, '\'', false)
+	if pctEncoded == v {
+		return "", fmt.Errorf("bad ext-value: no second apostrophe")
+	}
 	decoded, err := url.PathUnescape(pctEncoded)
 	if err != nil {
 		return "", err

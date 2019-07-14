@@ -106,25 +106,16 @@ func parseTags(h http.Header, name string) []EntityTag {
 	var tags []EntityTag
 	for v, vs := iterElems("", h[name]); v != ""; v, vs = iterElems(v, vs) {
 		orig := v
-		var prefixLen, endPos int
 		var tag EntityTag
-		if strings.HasPrefix(v, "W/") {
-			prefixLen = 2
-			v = v[prefixLen:]
-		}
+		v = strings.TrimPrefix(v, "W/")
+		prefixLen := len(orig) - len(v)
 		switch peek(v) {
 		case 0:
 			continue
-
 		case '"':
-			v = v[1:]
-			endPos = strings.IndexByte(v, '"')
-			if endPos == -1 {
-				continue
-			}
-			tag = EntityTag(orig[:prefixLen+1+endPos+1])
-			v = v[endPos+1:]
-
+			var opaque string
+			opaque, v = consumeTo(v[1:], '"', true)
+			tag = EntityTag(orig[:prefixLen+1+len(opaque)])
 		default:
 			var item string
 			item, v = consumeItem(v)
@@ -139,9 +130,9 @@ func buildTags(tags []EntityTag) string {
 	b := &strings.Builder{}
 	for i, tag := range tags {
 		if i > 0 {
-			b.WriteString(", ")
+			write(b, ", ")
 		}
-		b.WriteString(string(tag))
+		write(b, string(tag))
 	}
 	return b.String()
 }
