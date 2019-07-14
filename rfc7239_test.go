@@ -144,17 +144,21 @@ func TestForwarded(t *testing.T) {
 		{
 			http.Header{"Forwarded": {"for=_a; by=_b, for=_c"}},
 			[]ForwardedElem{
-				{For: Node{ObfuscatedNode: "_a"}},
+				{For: Node{ObfuscatedNode: "_a"}, By: Node{ObfuscatedNode: "_b"}},
 				{For: Node{ObfuscatedNode: "_c"}},
 			},
 		},
 		{
 			http.Header{"Forwarded": {"for = _a;by = _b"}},
-			[]ForwardedElem{{}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_a"}, By: Node{ObfuscatedNode: "_b"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {`for = "_a";by = "_b"`}},
-			[]ForwardedElem{{}},
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_a"}, By: Node{ObfuscatedNode: "_b"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {`for=_a;by=", for=_b`}},
@@ -171,6 +175,7 @@ func TestForwarded(t *testing.T) {
 				{
 					For: Node{ObfuscatedNode: "_a"},
 					By:  Node{ObfuscatedNode: ", for="},
+					Ext: map[string]string{`_b"`: ""},
 				},
 			},
 		},
@@ -200,7 +205,7 @@ func TestForwarded(t *testing.T) {
 		{
 			http.Header{"Forwarded": {`for=_a by=_b, for=_c`}},
 			[]ForwardedElem{
-				{For: Node{ObfuscatedNode: "_a"}},
+				{For: Node{ObfuscatedNode: "_a"}, By: Node{ObfuscatedNode: "_b"}},
 				{For: Node{ObfuscatedNode: "_c"}},
 			},
 		},
@@ -213,7 +218,10 @@ func TestForwarded(t *testing.T) {
 		},
 		{
 			http.Header{"Forwarded": {`for;by;qux, for=_c`}},
-			[]ForwardedElem{{}, {For: Node{ObfuscatedNode: "_c"}}},
+			[]ForwardedElem{
+				{Ext: map[string]string{"qux": ""}},
+				{For: Node{ObfuscatedNode: "_c"}},
+			},
 		},
 		{
 			http.Header{"Forwarded": {`for;=qux, for=_c`}},

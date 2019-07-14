@@ -17,27 +17,13 @@ func Forwarded(h http.Header) []ForwardedElem {
 	var elems []ForwardedElem
 	for v, vs := iterElems("", h["Forwarded"]); v != ""; v, vs = iterElems(v, vs) {
 		var elem ForwardedElem
+	ParamsLoop:
 		for {
 			var name, value string
-			name, v = consumeItem(v)
-			if name == "" { // no forwarded-pair
-				if peek(v) == ';' {
-					v = v[1:]
-					continue
-				}
-				break
-			}
-			name = strings.ToLower(name)
-			if peek(v) != '=' {
-				break
-			}
-			v = v[1:]
-			if peek(v) == '"' {
-				value, v = consumeQuoted(v)
-			} else {
-				value, v = consumeItem(v)
-			}
+			name, value, v = consumeParam(v)
 			switch name {
+			case "":
+				break ParamsLoop
 			case "for":
 				elem.For = parseNode(value)
 			case "by":
