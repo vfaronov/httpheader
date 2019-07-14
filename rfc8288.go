@@ -14,8 +14,8 @@ type LinkElem struct {
 	Rel      string   // lowercased
 	Target   *url.URL // always non-nil
 	Title    string
-	Type     string // lowercased
-	HrefLang string // lowercased
+	Type     string   // lowercased
+	HrefLang []string // lowercased
 	Media    string
 	Ext      map[string]string // usually nil; keys lowercased
 }
@@ -110,7 +110,7 @@ LinksLoop:
 				seenType = true
 
 			case "hreflang":
-				link.HrefLang = strings.ToLower(value)
+				link.HrefLang = append(link.HrefLang, strings.ToLower(value))
 
 			case "media":
 				if seenMedia {
@@ -198,9 +198,9 @@ func buildLink(links []LinkElem) string {
 			b.WriteString(link.Type)
 			b.WriteString(`"`)
 		}
-		if link.HrefLang != "" {
+		for _, lang := range link.HrefLang {
 			b.WriteString("; hreflang=")
-			b.WriteString(link.HrefLang)
+			b.WriteString(lang)
 		}
 		if link.Media != "" {
 			b.WriteString("; media=")

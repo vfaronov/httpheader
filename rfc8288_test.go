@@ -80,13 +80,13 @@ func TestLink(t *testing.T) {
 				{
 					Rel:      "next",
 					Target:   U("http://x.test/b"),
-					HrefLang: "en",
+					HrefLang: []string{"en"},
 					Ext:      map[string]string{"extra": ""},
 				},
 				{
 					Rel:      "prefetch",
 					Target:   U("http://x.test/b"),
-					HrefLang: "en",
+					HrefLang: []string{"en"},
 					Ext:      map[string]string{"extra": ""},
 				},
 			},
@@ -228,7 +228,7 @@ func TestLink(t *testing.T) {
 				{
 					Rel:      "next",
 					Target:   U("http://x.test/b"),
-					HrefLang: "en-us",
+					HrefLang: []string{"en-us"},
 				},
 				{
 					Rel:    "up",
@@ -272,10 +272,18 @@ func TestLink(t *testing.T) {
 					Target:   U("https://example.com/privacy"),
 					Title:    "Privacy",
 					Type:     "application/xhtml+xml",
-					HrefLang: "en-us",
+					HrefLang: []string{"en-us"},
 					Media:    "screen",
 				},
 			},
+		},
+		{
+			http.Header{"Link": {"</privacy/>; rel=privacy-policy; hreflang=en; hreflang=se"}},
+			[]LinkElem{{
+				Rel:      "privacy-policy",
+				Target:   U("http://x.test/privacy/"),
+				HrefLang: []string{"en", "se"},
+			}},
 		},
 
 		// Invalid headers.
@@ -333,7 +341,7 @@ func TestLink(t *testing.T) {
 				{
 					Rel:      "next",
 					Target:   U("http://x.test/b"),
-					HrefLang: "en",
+					HrefLang: []string{"en"},
 					Ext:      map[string]string{"prefetch": ""},
 				},
 			},
@@ -425,13 +433,13 @@ func TestLink(t *testing.T) {
 				{
 					Rel:      "next",
 					Target:   U("http://x.test/b"),
-					HrefLang: "en",
+					HrefLang: []string{"en"},
 					Ext:      map[string]string{"extra": ""},
 				},
 				{
 					Rel:      "prefetch",
 					Target:   U("http://x.test/b"),
-					HrefLang: "en",
+					HrefLang: []string{"en"},
 					Ext:      map[string]string{"extra": ""},
 				},
 			},
@@ -487,22 +495,17 @@ func TestSetLink(t *testing.T) {
 					Target:   U("https://example.com/privacy"),
 					Title:    "Privacy",
 					Type:     "application/xhtml+xml",
-					HrefLang: "en-US",
+					HrefLang: []string{"en-US", "en-GB"},
 					Ext:      map[string]string{"foo": "bar"},
 				},
 			},
-			http.Header{"Link": {`<https://example.com/privacy>; anchor="https://example.com/"; rel=privacy-policy; title="Privacy"; type="application/xhtml+xml"; hreflang=en-US; foo=bar`}},
+			http.Header{"Link": {`<https://example.com/privacy>; anchor="https://example.com/"; rel=privacy-policy; title="Privacy"; type="application/xhtml+xml"; hreflang=en-US; hreflang=en-GB; foo=bar`}},
 		},
 		{
 			[]LinkElem{
 				{
-					Anchor:   U("https://example.com/"),
-					Rel:      "privacy-policy",
-					Target:   U("https://example.com/privacy"),
-					Title:    "Privacy",
-					Type:     "application/xhtml+xml",
-					HrefLang: "en-US",
-					Media:    "screen",
+					Rel:    "privacy-policy",
+					Target: U("https://example.com/privacy"),
 					Ext: map[string]string{
 						"anchor":   "azaza",
 						"rel":      "azaza",
@@ -516,7 +519,7 @@ func TestSetLink(t *testing.T) {
 					},
 				},
 			},
-			http.Header{"Link": {`<https://example.com/privacy>; anchor="https://example.com/"; rel=privacy-policy; title="Privacy"; type="application/xhtml+xml"; hreflang=en-US; media=screen`}},
+			http.Header{"Link": {`<https://example.com/privacy>; rel=privacy-policy`}},
 		},
 		{
 			[]LinkElem{
@@ -614,7 +617,7 @@ func TestLinkRoundTrip(t *testing.T) {
 			Target:   &url.URL{},
 			Title:    "token | quotable | UTF-8 | empty",
 			Type:     "lower token/token | empty",
-			HrefLang: "lower token | empty",
+			HrefLang: []string{"lower token"},
 			Media:    "token | empty",
 			Ext: map[string]string{
 				"lower token without *": "token | quotable | UTF-8 | empty",
