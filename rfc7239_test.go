@@ -139,7 +139,7 @@ func TestForwarded(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Forwarded": {""}},
-			nil,
+			[]ForwardedElem{},
 		},
 		{
 			http.Header{"Forwarded": {"for=_a; by=_b, for=_c"}},

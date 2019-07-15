@@ -32,9 +32,13 @@ type LinkElem struct {
 // like rel="next prefetch", multiple LinkElems with different Rel are returned.
 // Any 'rev' parameter is discarded.
 func Link(h http.Header, base *url.URL) []LinkElem {
-	var links []LinkElem
+	values := h["Link"]
+	if values == nil {
+		return nil
+	}
+	links := make([]LinkElem, 0, estimateElems(values))
 LinksLoop:
-	for v, vs := iterElems("", h["Link"]); v != ""; v, vs = iterElems(v, vs) {
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var link LinkElem
 		var rawTarget string
 		var err error

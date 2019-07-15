@@ -7,7 +7,10 @@ import (
 
 // A ViaElem represents one element of the Via header (RFC 7230 Section 5.7.1).
 type ViaElem struct {
-	ReceivedProto string // canonicalized to include name: "HTTP/1.1", not "1.1"
+	// ReceivedProto is canonicalized to always
+	// include name: "1.1" becomes "HTTP/1.1".
+	// Special case: "2.0" and "HTTP/2.0" become "HTTP/2".
+	ReceivedProto string
 	ReceivedBy    string
 	Comment       string
 }
@@ -21,9 +24,7 @@ func Via(h http.Header) []ViaElem {
 	for v, vs := iterElems("", h["Via"]); v != ""; v, vs = iterElems(v, vs) {
 		var elem ViaElem
 		elem.ReceivedProto, v = consumeItem(v)
-		if strings.IndexByte(elem.ReceivedProto, '/') == -1 {
-			elem.ReceivedProto = "HTTP/" + elem.ReceivedProto
-		}
+		elem.ReceivedProto = canonicalProto(elem.ReceivedProto)
 		v = skipWS(v)
 		elem.ReceivedBy, v = consumeReceivedBy(v)
 		v = skipWS(v)
@@ -33,6 +34,26 @@ func Via(h http.Header) []ViaElem {
 		elems = append(elems, elem)
 	}
 	return elems
+}
+
+func canonicalProto(proto string) string {
+	// Special-case typical values to avoid allocating them every time.
+	// Also use this opportunity to canonicalize "2.0" to "2".
+	// (See RFC 7540 Errata 4663, and its discussion on ietf-http-wg@w3.org,
+	// for some background on this contentious issue.)
+	switch proto {
+	case "1.0":
+		return "HTTP/1.0"
+	case "1.1":
+		return "HTTP/1.1"
+	case "2", "2.0", "HTTP/2.0":
+		return "HTTP/2"
+	default:
+		if strings.IndexByte(proto, '/') != -1 {
+			return proto
+		}
+		return "HTTP/" + proto
+	}
 }
 
 func consumeReceivedBy(v string) (by, newv string) {

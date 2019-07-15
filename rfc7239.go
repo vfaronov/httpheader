@@ -14,8 +14,12 @@ import (
 // header's syntax makes it possible for a malicious client to submit a malformed
 // value that will "shadow" further elements appended to the same value.
 func Forwarded(h http.Header) []ForwardedElem {
-	var elems []ForwardedElem
-	for v, vs := iterElems("", h["Forwarded"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Forwarded"]
+	if values == nil {
+		return nil
+	}
+	elems := make([]ForwardedElem, 0, estimateElems(values))
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var elem ForwardedElem
 	ParamsLoop:
 		for {

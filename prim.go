@@ -1,12 +1,29 @@
 package httpheader
 
-import "strings"
+import (
+	"strings"
+)
 
 func peek(v string) byte {
 	if v == "" {
 		return 0
 	}
 	return v[0]
+}
+
+// estimateElems returns an estimate of the total count of comma-separated
+// elements in vs.
+func estimateElems(vs []string) int {
+	n := 0
+	for _, v := range vs {
+		n += strings.Count(v, ",") + 1
+		// Cap at some arbitrary number to avoid allocating too much when
+		// a header turns out to contain many quoted commas.
+		if n > 16 {
+			return 16
+		}
+	}
+	return n
 }
 
 // iterElems iterates over elements in comma-separated header fields

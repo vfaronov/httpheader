@@ -116,6 +116,13 @@ func TestVia(t *testing.T) {
 				{"HTTP/1.1", "example.net", ""},
 			},
 		},
+		{
+			http.Header{"Via": {"2.0 example.com, HTTP/2.0 example.net"}},
+			[]ViaElem{
+				{"HTTP/2", "example.com", ""},
+				{"HTTP/2", "example.net", ""},
+			},
+		},
 
 		// Invalid headers.
 		// Precise outputs on them are not a guaranteed part of the API.

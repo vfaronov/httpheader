@@ -18,8 +18,12 @@ type WarningElem struct {
 
 // Warning parses the Warning header from h (RFC 7234 Section 5.5).
 func Warning(h http.Header) []WarningElem {
-	var elems []WarningElem
-	for v, vs := iterElems("", h["Warning"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Warning"]
+	if values == nil {
+		return nil
+	}
+	elems := make([]WarningElem, 0, estimateElems(values))
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var elem WarningElem
 		var codeStr string
 		codeStr, v = consumeTo(v, ' ', false)

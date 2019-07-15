@@ -103,8 +103,12 @@ func AddIfNoneMatch(h http.Header, tags ...EntityTag) {
 }
 
 func parseTags(h http.Header, name string) []EntityTag {
-	var tags []EntityTag
-	for v, vs := iterElems("", h[name]); v != ""; v, vs = iterElems(v, vs) {
+	values := h[name]
+	if values == nil {
+		return nil
+	}
+	tags := make([]EntityTag, 0, estimateElems(values))
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		orig := v
 		var tag EntityTag
 		v = strings.TrimPrefix(v, "W/")

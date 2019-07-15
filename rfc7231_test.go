@@ -800,7 +800,7 @@ func TestAccept(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Accept": {""}},
-			nil,
+			[]AcceptElem{},
 		},
 		{
 			http.Header{"Accept": {"text"}},

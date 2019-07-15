@@ -13,14 +13,15 @@ import (
 // If the header is present but empty (meaning all methods are disallowed),
 // Allow returns a non-nil slice of length 0.
 func Allow(h http.Header) []string {
-	var methods []string
-	for v, vs := iterElems("", h["Allow"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Allow"]
+	if values == nil {
+		return nil
+	}
+	methods := make([]string, 0, estimateElems(values))
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var method string
 		method, v = consumeItem(v)
 		methods = append(methods, method)
-	}
-	if methods == nil && h["Allow"] != nil {
-		methods = make([]string, 0)
 	}
 	return methods
 }
@@ -234,8 +235,12 @@ type AcceptElem struct {
 // Accept parses the Accept header from h (RFC 7231 Section 5.3.2).
 // The function MatchAccept is useful for working with the returned slice.
 func Accept(h http.Header) []AcceptElem {
-	var elems []AcceptElem
-	for v, vs := iterElems("", h["Accept"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Accept"]
+	if values == nil {
+		return nil
+	}
+	elems := make([]AcceptElem, 0, estimateElems(values))
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		elem := AcceptElem{Q: 1}
 		elem.Type, v = consumeItem(v)
 		elem.Type = strings.ToLower(elem.Type)

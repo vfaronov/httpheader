@@ -44,7 +44,7 @@ func TestLink(t *testing.T) {
 		// Valid headers.
 		{
 			http.Header{"Link": {""}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {"<https://example.net/>;rel=up"}},
@@ -291,31 +291,31 @@ func TestLink(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"Link": {"???;rel=self"}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {"<a; rel=self"}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {"a>; rel=self"}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {"<b>;rel="}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {`<b>;rel="`}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {`<b>;rel=""`}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {"<b>;=;rel=next"}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {"<b>;;;rel=next"}},
@@ -408,11 +408,11 @@ func TestLink(t *testing.T) {
 		},
 		{
 			http.Header{"Link": {"<://example.com/>; rel=up"}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			http.Header{"Link": {`<b>; anchor="://example.com/"; rel=up`}},
-			nil,
+			[]LinkElem{},
 		},
 		{
 			// "occurrences after the first MUST be ignored by parsers"

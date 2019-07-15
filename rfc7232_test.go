@@ -14,7 +14,7 @@ func TestIfMatch(t *testing.T) {
 		// Valid headers.
 		{
 			http.Header{"If-Match": {""}},
-			nil,
+			[]EntityTag{},
 		},
 		{
 			http.Header{"If-Match": {"*"}},
