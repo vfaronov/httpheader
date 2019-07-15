@@ -111,6 +111,13 @@ func TestAllow(t *testing.T) {
 	}
 }
 
+func BenchmarkAllow(b *testing.B) {
+	header := http.Header{"Allow": {"GET, HEAD, POST, PUT, DELETE", "OPTIONS, TRACE"}}
+	for i := 0; i < b.N; i++ {
+		Allow(header)
+	}
+}
+
 func ExampleVary() {
 	header := http.Header{"Vary": {"cookie, accept-encoding"}}
 	vary := Vary(header)
@@ -152,6 +159,13 @@ func ExampleAddVary() {
 
 func TestVaryFuzz(t *testing.T) {
 	checkFuzz(t, "Vary", Vary, SetVary)
+}
+
+func BenchmarkVary(b *testing.B) {
+	header := http.Header{"Vary": {"Accept, Accept-Language, Accept-Encoding, Prefer", "User-Agent, Cookie"}}
+	for i := 0; i < b.N; i++ {
+		Vary(header)
+	}
 }
 
 func ExampleUserAgent() {
@@ -889,6 +903,20 @@ func TestAccept(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			checkParse(t, test.header, test.result, Accept(test.header))
 		})
+	}
+}
+
+func BenchmarkAcceptSimple(b *testing.B) {
+	header := http.Header{"Accept": {"application/json, text/xml;q=0.5"}}
+	for i := 0; i < b.N; i++ {
+		Accept(header)
+	}
+}
+
+func BenchmarkAcceptComplex(b *testing.B) {
+	header := http.Header{"Accept": {`application/x.my-custom+json;q=1;full;linkage=no, application/vnd.api+json;profile="http://example.com/last-modified";q=0.9, application/vnd.api+json;q=0.8, application/json;q=0.6, text/*;q=0.1`}}
+	for i := 0; i < b.N; i++ {
+		Accept(header)
 	}
 }
 

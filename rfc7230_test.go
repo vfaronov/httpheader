@@ -180,3 +180,10 @@ func TestViaRoundTrip(t *testing.T) {
 		}},
 	)
 }
+
+func BenchmarkVia(b *testing.B) {
+	header := http.Header{"Via": {"1.1 proxy2.example.net (CWA (corporate Web accelerator))", "2 api-front.example.com:443 (trace: 97G9Hcio), 2 gw1-3.svc.example.com"}}
+	for i := 0; i < b.N; i++ {
+		Via(header)
+	}
+}
