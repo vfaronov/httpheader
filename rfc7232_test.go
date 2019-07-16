@@ -22,15 +22,20 @@ func TestIfMatch(t *testing.T) {
 		},
 		{
 			http.Header{"If-Match": {`W/"",""`}},
-			[]EntityTag{`W/""`, `""`},
+			[]EntityTag{{Weak: true}, {}},
 		},
 		{
-			http.Header{"If-Match": {`"foo"`, `W/"bar"`, `"baz qux",W/",xyzzy,"`}},
-			[]EntityTag{`"foo"`, `W/"bar"`, `"baz qux"`, `W/",xyzzy,"`},
+			http.Header{"If-Match": {`"foo"`, `W/"bar"`, `"baz, qux",W/"xýzzý"`}},
+			[]EntityTag{
+				{Opaque: "foo"},
+				{Weak: true, Opaque: "bar"},
+				{Opaque: "baz, qux"},
+				{Weak: true, Opaque: "xýzzý"},
+			},
 		},
 		{
 			http.Header{"If-Match": {"W/\"\t\x81\x82\x83\\\""}},
-			[]EntityTag{"W/\"\t\x81\x82\x83\\\""},
+			[]EntityTag{{Weak: true, Opaque: "\t\x81\x82\x83\\"}},
 		},
 
 		// Invalid headers.
@@ -38,19 +43,29 @@ func TestIfMatch(t *testing.T) {
 		// They may change as convenient for the parsing code.
 		{
 			http.Header{"If-Match": {`foo,bar,baz`}},
-			[]EntityTag{`foo`, `bar`, `baz`},
+			[]EntityTag{{}},
 		},
 		{
 			http.Header{"If-Match": {"\t, \tW/foo,bar"}},
-			[]EntityTag{`W/foo`, `bar`},
+			[]EntityTag{{}},
 		},
 		{
 			http.Header{"If-Match": {`"foo"`, `*`}},
-			[]EntityTag{`"foo"`, `*`},
+			[]EntityTag{{Opaque: "foo"}, AnyTag},
 		},
 		{
 			http.Header{"If-Match": {`"foo`, `bar", baz`, `"`, `W/"qux`, `W/`}},
-			[]EntityTag{`"foo`, `bar"`, `baz`, `"`, `W/"qux`},
+			[]EntityTag{
+				{Opaque: "foo"},
+				{Opaque: ", baz"},
+				{},
+				{Weak: true, Opaque: "qux"},
+				{Weak: true},
+			},
+		},
+		{
+			http.Header{"If-Match": {"W"}},
+			[]EntityTag{{}},
 		},
 	}
 	for _, test := range tests {
@@ -60,8 +75,35 @@ func TestIfMatch(t *testing.T) {
 	}
 }
 
+func TestSetETag(t *testing.T) {
+	tests := []struct {
+		input  EntityTag
+		result http.Header
+	}{
+		{
+			EntityTag{},
+			http.Header{"Etag": {`""`}},
+		},
+		{
+			EntityTag{Opaque: "foo"},
+			http.Header{"Etag": {`"foo"`}},
+		},
+		{
+			EntityTag{Weak: true, Opaque: "foo, bar"},
+			http.Header{"Etag": {`W/"foo, bar"`}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			header := http.Header{}
+			SetETag(header, test.input)
+			checkGenerate(t, test.input, test.result, header)
+		})
+	}
+}
+
 func ExampleMatchWeak() {
-	serverTag := MakeTag("v.62", true)
+	serverTag := EntityTag{Weak: true, Opaque: "v.62"}
 	request := http.Header{"If-None-Match": {`W/"v.57", W/"v.62", "f09a3ccd"`}}
 	response := http.Header{}
 	if MatchWeak(IfNoneMatch(request), serverTag) {
@@ -80,18 +122,60 @@ func TestMatch(t *testing.T) {
 		serverTag  EntityTag
 		result     bool
 	}{
-		{[]EntityTag{}, `"foo"`, false},
-		{[]EntityTag{`"foo"`}, `"foo"`, true},
-		{[]EntityTag{`"foo"`}, `"Foo"`, false},
-		{[]EntityTag{`W/"foo"`}, `"foo"`, false},
-		{[]EntityTag{`"foo"`}, `W/"foo"`, false},
-		{[]EntityTag{`"foo"`, `"bar"`}, `"bar"`, true},
-		{[]EntityTag{`"foo"`, `W/"bar"`}, `W/"bar"`, false},
-		{[]EntityTag{`foo`, `bar`}, `"bar"`, true},
-		{[]EntityTag{`W/foo`, `W/bar`}, `bar`, false},
-		{[]EntityTag{AnyTag}, `"foo"`, true},
-		{[]EntityTag{`W/"bar"`, AnyTag}, `"foo"`, true},
-		{[]EntityTag{`W/"foo"`, `"foo"`, `W/"bar"`}, `"foo"`, true},
+		{
+			[]EntityTag{},
+			EntityTag{Opaque: "foo"},
+			false,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}},
+			EntityTag{Opaque: "Foo"},
+			false,
+		},
+		{
+			[]EntityTag{{Weak: true, Opaque: "foo"}},
+			EntityTag{Opaque: "foo"},
+			false,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}},
+			EntityTag{Weak: true, Opaque: "foo"},
+			false,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}, {Opaque: "bar"}},
+			EntityTag{Opaque: "bar"},
+			true,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}, {Weak: true, Opaque: "bar"}},
+			EntityTag{Weak: true, Opaque: "bar"},
+			false,
+		},
+		{
+			[]EntityTag{AnyTag},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{{Weak: true, Opaque: "bar"}, AnyTag},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{
+				{Weak: true, Opaque: "foo"},
+				{Opaque: "foo"},
+				{Weak: true, Opaque: "bar"},
+			},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -110,18 +194,60 @@ func TestMatchWeak(t *testing.T) {
 		serverTag  EntityTag
 		result     bool
 	}{
-		{[]EntityTag{}, `"foo"`, false},
-		{[]EntityTag{`"foo"`}, `"foo"`, true},
-		{[]EntityTag{`"foo"`}, `"Foo"`, false},
-		{[]EntityTag{`W/"foo"`}, `"foo"`, true},
-		{[]EntityTag{`"foo"`}, `W/"foo"`, true},
-		{[]EntityTag{`"foo"`, `"bar"`}, `"bar"`, true},
-		{[]EntityTag{`"foo"`, `W/"bar"`}, `W/"bar"`, true},
-		{[]EntityTag{`foo`, `bar`}, `"bar"`, true},
-		{[]EntityTag{`W/foo`, `W/bar`}, `bar`, true},
-		{[]EntityTag{AnyTag}, `"foo"`, true},
-		{[]EntityTag{`W/"bar"`, AnyTag}, `"foo"`, true},
-		{[]EntityTag{`W/"foo"`, `"foo"`, `W/"bar"`}, `"foo"`, true},
+		{
+			[]EntityTag{},
+			EntityTag{Opaque: "foo"},
+			false,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}},
+			EntityTag{Opaque: "Foo"},
+			false,
+		},
+		{
+			[]EntityTag{{Weak: true, Opaque: "foo"}},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}},
+			EntityTag{Weak: true, Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}, {Opaque: "bar"}},
+			EntityTag{Opaque: "bar"},
+			true,
+		},
+		{
+			[]EntityTag{{Opaque: "foo"}, {Weak: true, Opaque: "bar"}},
+			EntityTag{Weak: true, Opaque: "bar"},
+			true,
+		},
+		{
+			[]EntityTag{AnyTag},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{{Weak: true, Opaque: "bar"}, AnyTag},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
+		{
+			[]EntityTag{
+				{Weak: true, Opaque: "foo"},
+				{Opaque: "foo"},
+				{Weak: true, Opaque: "bar"},
+			},
+			EntityTag{Opaque: "foo"},
+			true,
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -135,35 +261,5 @@ func TestMatchWeak(t *testing.T) {
 }
 
 func TestIfMatchFuzz(t *testing.T) {
-	checkFuzz(t, "If-Match", IfMatch, SetIfMatch)
-}
-
-func TestEntityTagRoundTrip(t *testing.T) {
-	testTags := []EntityTag{
-		MakeTag("deadf00d", true),
-		MakeTag("deadf00d", false),
-		`deadf00d`, // malformed entity-tag without double quotes
-	}
-	for _, serverTag := range testTags {
-		// Server sends ETag.
-		h1 := http.Header{}
-		SetETag(h1, serverTag)
-
-		// Client receives and remembers this tag
-		// in addition to a previously saved one.
-		clientTags := []EntityTag{`W/"deadbeef"`}
-		clientTags = append(clientTags, ETag(h1))
-
-		// Client submits all the tags it has with the next request.
-		h2 := http.Header{}
-		SetIfNoneMatch(h2, clientTags)
-
-		// Server extracts the client's tags and checks against its own.
-		clientTags = IfNoneMatch(h2)
-		match := MatchWeak(clientTags, serverTag)
-
-		if !match {
-			t.Errorf("serverTag = %#v: no match", serverTag)
-		}
-	}
+	checkFuzz(t, "If-Match", IfMatch, nil)
 }

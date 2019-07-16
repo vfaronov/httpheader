@@ -59,7 +59,9 @@ func checkFuzz(t *testing.T, name string, parseFunc, generateFunc interface{}) {
 			t.Logf("header: %#v", header)
 			argsV := []reflect.Value{reflect.ValueOf(header)}
 			resultV := parseFuncV.Call(argsV)
-			generateFuncV.Call(append(argsV, resultV...))
+			if generateFuncV.Kind() != reflect.Invalid { // not nil passed
+				generateFuncV.Call(append(argsV, resultV...))
+			}
 		})
 	}
 }

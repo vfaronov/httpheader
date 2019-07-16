@@ -5,101 +5,52 @@ import (
 	"strings"
 )
 
-// An EntityTag is an opaque entity tag (RFC 7232 Section 2.3). It is represented
-// as a string, just as it appears in the HTTP header, to accommodate entity tags
-// with missing double quotes, which is a very common error in the wild.
-//
-// Use MakeTag to create a new entity tag of your own.
-type EntityTag string
+// An EntityTag is an opaque entity tag (RFC 7232 Section 2.3).
+type EntityTag struct {
+	Weak   bool
+	Opaque string // not including double quotes
+
+	wildcard bool
+}
 
 // AnyTag represents a wildcard (*) in an If-Match or If-None-Match header.
-var AnyTag = EntityTag("*")
-
-// MakeTag returns an EntityTag with the given opaque data and weak flag.
-func MakeTag(opaque string, weak bool) EntityTag {
-	if weak {
-		return EntityTag(`W/"` + opaque + `"`)
-	} else {
-		return EntityTag(`"` + opaque + `"`)
-	}
-}
-
-// Weak returns true if tag is marked as weak.
-func (tag EntityTag) Weak() bool {
-	return strings.HasPrefix(string(tag), "W/")
-}
-
-// Opaque returns the opaque data of tag.
-func (tag EntityTag) Opaque() string {
-	data := strings.TrimPrefix(string(tag), "W/")
-	data = strings.TrimPrefix(data, `"`)
-	data = strings.TrimSuffix(data, `"`)
-	return data
-}
-
-// ETag parses the ETag header from h (RFC 7232 Section 2.3).
-// If h does not contain ETag, a zero EntityTag is returned.
-func ETag(h http.Header) EntityTag {
-	return EntityTag(h.Get("ETag"))
-}
+var AnyTag = EntityTag{wildcard: true}
 
 // SetETag replaces the ETag header in h.
+//
+// This package does not provide a function to parse ETag, only to set it.
+// Parsing an ETag is of no use to most clients, and can hamper interoperability,
+// because many servers in the wild send malformed ETags without double quotes.
+// Instead, clients should treat ETags as opaque strings, and blindly join them
+// with commas for If-Match/If-None-Match.
 func SetETag(h http.Header, tag EntityTag) {
-	h.Set("ETag", string(tag))
+	b := &strings.Builder{}
+	b.Grow(len(tag.Opaque) + 4)
+	if tag.Weak {
+		write(b, "W/")
+	}
+	write(b, `"`, tag.Opaque, `"`)
+	h.Set("Etag", b.String())
 }
 
 // IfMatch parses the If-Match header from h (RFC 7232 Section 3.1).
 // A wildcard (If-Match: *) is returned as the special AnyTag value.
 //
 // The function Match is useful for working with the returned slice.
+//
+// There is no SetIfMatch function; see comment on SetETag.
 func IfMatch(h http.Header) []EntityTag {
 	return parseTags(h, "If-Match")
-}
-
-// SetIfMatch replaces the If-Match header in h. See also AddIfMatch.
-//
-// To send a wildcard (If-Match: *), pass AnyTag as the only element of tags.
-func SetIfMatch(h http.Header, tags []EntityTag) {
-	if len(tags) == 0 {
-		h.Del("If-Match")
-		return
-	}
-	h.Set("If-Match", buildTags(tags))
-}
-
-// AddIfMatch is like SetIfMatch but appends instead of replacing.
-func AddIfMatch(h http.Header, tags ...EntityTag) {
-	if len(tags) == 0 {
-		return
-	}
-	h.Add("If-Match", buildTags(tags))
 }
 
 // IfNoneMatch parses the If-None-Match header from h (RFC 7232 Section 3.2).
 // A wildcard (If-None-Match: *) is returned as the special AnyTag value.
 //
 // The function MatchWeak is useful for working with the returned slice.
+//
+// There is no SetIfNoneMatch function; see comment on SetETag.
 func IfNoneMatch(h http.Header) []EntityTag {
 	return parseTags(h, "If-None-Match")
-}
-
-// SetIfNoneMatch replaces the If-None-Match header in h. See also AddIfNoneMatch.
-//
-// To send a wildcard (If-None-Match: *), pass AnyTag as the only element of tags.
-func SetIfNoneMatch(h http.Header, tags []EntityTag) {
-	if len(tags) == 0 {
-		h.Del("If-None-Match")
-		return
-	}
-	h.Set("If-None-Match", buildTags(tags))
-}
-
-// AddIfNoneMatch is like SetIfNoneMatch but appends instead of replacing.
-func AddIfNoneMatch(h http.Header, tags ...EntityTag) {
-	if len(tags) == 0 {
-		return
-	}
-	h.Add("If-None-Match", buildTags(tags))
 }
 
 func parseTags(h http.Header, name string) []EntityTag {
@@ -109,36 +60,20 @@ func parseTags(h http.Header, name string) []EntityTag {
 	}
 	tags := make([]EntityTag, 0, estimateElems(values))
 	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
-		orig := v
-		var tag EntityTag
-		v = strings.TrimPrefix(v, "W/")
-		prefixLen := len(orig) - len(v)
-		switch peek(v) {
-		case 0:
+		if peek(v) == '*' {
+			tags = append(tags, AnyTag)
 			continue
-		case '"':
-			var opaque string
-			opaque, v = consumeTo(v[1:], '"', true)
-			tag = EntityTag(orig[:prefixLen+1+len(opaque)])
-		default:
-			var item string
-			item, v = consumeItem(v)
-			tag = EntityTag(orig[:prefixLen+len(item)])
 		}
+		var tag EntityTag
+		var marker string
+		marker, v = consumeTo(v, '"', false)
+		if marker == "W/" {
+			tag.Weak = true
+		}
+		tag.Opaque, v = consumeTo(v, '"', false)
 		tags = append(tags, tag)
 	}
 	return tags
-}
-
-func buildTags(tags []EntityTag) string {
-	b := &strings.Builder{}
-	for i, tag := range tags {
-		if i > 0 {
-			write(b, ", ")
-		}
-		write(b, string(tag))
-	}
-	return b.String()
 }
 
 // Match returns true if serverTag is equivalent to any of clientTags by strong
@@ -160,10 +95,10 @@ func matchTags(clientTags []EntityTag, serverTag EntityTag, weak bool) bool {
 		if ct == AnyTag {
 			return true
 		}
-		if !weak && (ct.Weak() || serverTag.Weak()) {
+		if !weak && (ct.Weak || serverTag.Weak) {
 			continue
 		}
-		if ct.Opaque() == serverTag.Opaque() {
+		if ct.Opaque == serverTag.Opaque {
 			return true
 		}
 	}
