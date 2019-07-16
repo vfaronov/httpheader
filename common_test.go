@@ -175,7 +175,7 @@ func likeString(rand *rand.Rand, ex string) string {
 	if exs := strings.Split(ex, " | "); len(exs) > 1 {
 		return likeString(rand, exs[rand.Intn(len(exs))])
 	}
-	if ex == "empty" {
+	if ex == "empty" || ex == "" {
 		return ""
 	}
 	// like "X without bc" = like "X" with letters 'b' and 'c' replaced with 'z'
@@ -193,6 +193,8 @@ func likeString(rand *rand.Rand, ex string) string {
 	switch ex {
 	case "token":
 		s = randString(rand, tchar)
+	case "token68":
+		s = randString(rand, alnum+"-._~+/") + strings.Repeat("=", rand.Intn(3))
 	case "token*":
 		s = randString(rand, tchar) + "*"
 	case "Header-Name":
@@ -314,7 +316,7 @@ func likeStruct(rand *rand.Rand, ex interface{}) interface{} {
 func likeSlice(rand *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
 	n := rand.Intn(4)
-	if n == 0 {
+	if exV.IsNil() || n == 0 {
 		return reflect.Zero(exV.Type()).Interface()
 	}
 	newV := reflect.MakeSlice(exV.Type(), n, n)
@@ -331,7 +333,7 @@ func likeSlice(rand *rand.Rand, ex interface{}) interface{} {
 func likeMap(rand *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
 	n := rand.Intn(4)
-	if n == 0 {
+	if exV.IsNil() || n == 0 {
 		return reflect.Zero(exV.Type()).Interface()
 	}
 	newV := reflect.MakeMap(exV.Type())

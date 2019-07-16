@@ -368,14 +368,11 @@ func TestForwardedRoundTrip(t *testing.T) {
 				For: Node{
 					IP:             net.IP{},
 					Port:           0,
-					ObfuscatedNode: "empty",
 					ObfuscatedPort: "_obfID | empty",
 				},
 				By: Node{
-					IP:             nil,
 					Port:           9999,
 					ObfuscatedNode: "_obfID | empty",
-					ObfuscatedPort: "empty",
 				},
 				Host:  "token | empty",
 				Proto: "lower token | empty",
