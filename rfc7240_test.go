@@ -9,17 +9,17 @@ import (
 func ExamplePrefer() {
 	header := http.Header{"Prefer": []string{
 		"wait=10, respond-async",
-		`Foo; Bar="quux & xyzzy"`,
+		`check-spelling; lang="en-US, en-GB"`,
 	}}
 	prefer := Prefer(header)
 	fmt.Printf("%+v\n%+v\n%+v\n",
 		prefer["wait"],
 		prefer["respond-async"],
-		prefer["foo"],
+		prefer["check-spelling"],
 	)
 	// Output: {Value:10 Params:map[]}
 	// {Value: Params:map[]}
-	// {Value: Params:map[bar:quux & xyzzy]}
+	// {Value: Params:map[lang:en-US, en-GB]}
 }
 
 func TestPrefer(t *testing.T) {
@@ -94,6 +94,25 @@ func TestPrefer(t *testing.T) {
 					"baz":   `quoted "qux"`,
 					"xyzzy": "",
 				}},
+			},
+		},
+		{
+			// RFC 7240 page 5: ``If any preference is specified more than once,
+			// only the first instance is to be considered.''
+			http.Header{"Prefer": {`foo=bar, foo=baz;qux="a,b,c", xyzzy=123`}},
+			map[string]Pref{"foo": {"bar", nil}, "xyzzy": {"123", nil}},
+		},
+		{
+			// The same treatment is applied to preference parameters,
+			// though not required there.
+			http.Header{"Prefer": {"foo;bar=baz;bar=qux"}},
+			map[string]Pref{"foo": {"", map[string]string{"bar": "baz"}}},
+		},
+		{
+			http.Header{"Prefer": {"Handling=Lenient, Return=Minimal"}},
+			map[string]Pref{
+				"handling": {"lenient", nil},
+				"return":   {"minimal", nil},
 			},
 		},
 

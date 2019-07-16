@@ -201,6 +201,12 @@ func consumeParams(v string) (params map[string]string, newv string) {
 		if name == "" {
 			break
 		}
+		// Use only the first occurrence of each param name.
+		// This is required in some other places that don't use consumeParams,
+		// but it seems like reasonable behavior in general.
+		if _, seen := params[name]; seen {
+			continue
+		}
 		if params == nil {
 			params = make(map[string]string)
 		}

@@ -6,9 +6,11 @@ import (
 )
 
 // A Pref contains a preference's value and any associated parameters (RFC 7240).
+// The Value is lowercased for preferences known to be case-insensitive,
+// including 'return' and 'handling'. All keys in Params are also lowercased.
 type Pref struct {
 	Value  string
-	Params map[string]string // keys lowercased
+	Params map[string]string
 }
 
 // Prefer parses the Prefer header from h (RFC 7240 with errata),
@@ -20,6 +22,14 @@ func Prefer(h http.Header) map[string]Pref {
 		var pref Pref
 		name, pref.Value, v = consumeParam(v)
 		pref.Params, v = consumeParams(v)
+		// RFC 7240 page 5: ``If any preference is specified more than once,
+		// only the first instance is to be considered.''
+		if _, seen := r[name]; seen {
+			continue
+		}
+		if name == "return" || name == "handling" {
+			pref.Value = strings.ToLower(pref.Value)
+		}
 		if r == nil {
 			r = make(map[string]Pref)
 		}
