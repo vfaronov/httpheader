@@ -3,6 +3,7 @@ package httpheader
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -122,8 +123,9 @@ func ExampleVary() {
 	header := http.Header{"Vary": {"cookie, accept-encoding"}}
 	vary := Vary(header)
 	if vary["Accept-Encoding"] || vary["*"] {
-		// this response varies by the client's acceptable encoding
+		fmt.Println("response depends on the client's encoding support")
 	}
+	// Output: response depends on the client's encoding support
 }
 
 func TestVary(t *testing.T) {
@@ -218,8 +220,8 @@ func ExampleSetUserAgent() {
 		{Name: "My-App", Version: "1.2.3", Comment: "example.com"},
 		{Name: "Go-http-client"},
 	})
-	fmt.Printf("%q", header)
-	// Output: map["User-Agent":["My-App/1.2.3 (example.com) Go-http-client"]]
+	header.Write(os.Stdout)
+	// Output: User-Agent: My-App/1.2.3 (example.com) Go-http-client
 }
 
 func TestServer(t *testing.T) {
@@ -567,12 +569,14 @@ func TestContentTypeRoundTrip(t *testing.T) {
 func ExampleSetContentType() {
 	header := http.Header{}
 	SetContentType(header, "text/html", map[string]string{"charset": "utf-8"})
+	header.Write(os.Stdout)
+	// Output: Content-Type: text/html;charset=utf-8
 }
 
 func ExampleAccept() {
 	header := http.Header{"Accept": {"Text/HTML; charset=utf-8; q=1; validate=yes"}}
 	fmt.Printf("%+v", Accept(header))
-	// Output: [{Type:text/html Q:1 Params:map[charset:utf-8] Ext:map[validate:yes]}]
+	// Output: [{Type:text/html Params:map[charset:utf-8] Q:1 Ext:map[validate:yes]}]
 }
 
 func TestAccept(t *testing.T) {
@@ -618,8 +622,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      1,
 					Params: map[string]string{"charset": "utf-8"},
+					Q:      1,
 				},
 				{
 					Type: "text/*",
@@ -632,8 +636,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      0.25,
 					Params: map[string]string{"charset": "utf-8"},
+					Q:      0.25,
 				},
 			},
 		},
@@ -642,8 +646,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      0.25,
 					Params: map[string]string{"charset": "utf-8"},
+					Q:      0.25,
 				},
 			},
 		},
@@ -652,8 +656,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      1,
 					Params: map[string]string{"charset": "UTF-8"},
+					Q:      1,
 				},
 			},
 		},
@@ -672,8 +676,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      1,
 					Params: map[string]string{"foo": "bar; baz; qux"},
+					Q:      1,
 				},
 			},
 		},
@@ -692,8 +696,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      1,
 					Params: map[string]string{"foo": "Bar; Baz"},
+					Q:      1,
 					Ext:    map[string]string{"qux": "Xyzzy"},
 				},
 			},
@@ -779,8 +783,8 @@ func TestAccept(t *testing.T) {
 				},
 				{
 					Type:   "text/plain",
-					Q:      1,
 					Params: map[string]string{"format": "flowed"},
+					Q:      1,
 				},
 				{
 					Type: "*/*",
@@ -811,8 +815,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text",
-					Q:      1,
 					Params: map[string]string{"html": ""},
+					Q:      1,
 				},
 			},
 		},
@@ -825,8 +829,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      1,
 					Params: map[string]string{"text/plain": ""},
+					Q:      1,
 				},
 			},
 		},
@@ -835,8 +839,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/html",
-					Q:      1,
 					Params: map[string]string{"charset": "utf-8"},
+					Q:      1,
 				},
 			},
 		},
@@ -850,7 +854,7 @@ func TestAccept(t *testing.T) {
 		{
 			http.Header{"Accept": {"text/plain; prose, text/plain; q=0.5"}},
 			[]AcceptElem{
-				{Type: "text/plain", Q: 1, Params: map[string]string{"prose": ""}},
+				{Type: "text/plain", Params: map[string]string{"prose": ""}, Q: 1},
 				{Type: "text/plain", Q: 0.5},
 			},
 		},
@@ -859,8 +863,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/plain",
-					Q:      1,
 					Params: map[string]string{"charset": ""},
+					Q:      1,
 				},
 				{
 					Type: "text/html",
@@ -875,8 +879,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/plain",
-					Q:      1,
 					Params: map[string]string{"charset": "", "format": "flowed"},
+					Q:      1,
 				},
 				{
 					Type: "text/html",
@@ -889,8 +893,8 @@ func TestAccept(t *testing.T) {
 			[]AcceptElem{
 				{
 					Type:   "text/plain",
-					Q:      1,
 					Params: map[string]string{"charset": "utf-8"},
+					Q:      1,
 				},
 				{
 					Type: "text/html",
@@ -926,6 +930,8 @@ func ExampleSetAccept() {
 		{Type: "application/json", Q: 1},
 		{Type: "*/*", Q: 0.1},
 	})
+	header.Write(os.Stdout)
+	// Output: Accept: application/json, */*;q=0.1
 }
 
 func TestSetAccept(t *testing.T) {
@@ -1034,8 +1040,8 @@ func TestAcceptRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetAccept, Accept,
 		[]AcceptElem{{
 			Type:   "lower token/token",
-			Q:      0.999,
 			Params: map[string]string{"lower token without q": "quotable | empty"},
+			Q:      0.999,
 			Ext:    map[string]string{"lower token without q": "quotable | empty"},
 		}},
 	)

@@ -97,8 +97,8 @@ type ForwardedElem struct {
 	By    Node
 	For   Node
 	Host  string
-	Proto string            // lowercased
-	Ext   map[string]string // keys lowercased
+	Proto string
+	Ext   map[string]string
 }
 
 // A Node represents a node identifier (RFC 7239 Section 6).
@@ -146,7 +146,7 @@ func writeNode(b *strings.Builder, wrote bool, name string, node Node) bool {
 	}
 
 	switch {
-	case len(node.IP) > 0:
+	case node.IP != nil:
 		rawIP = node.IP.String()
 	case node.ObfuscatedNode != "":
 		rawIP = node.ObfuscatedNode

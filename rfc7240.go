@@ -6,18 +6,20 @@ import (
 )
 
 // A Pref contains a preference's value and any associated parameters (RFC 7240).
-// The Value is lowercased for preferences known to be case-insensitive,
-// including 'return' and 'handling'. All keys in Params are also lowercased.
 type Pref struct {
 	Value  string
 	Params map[string]string
 }
 
 // Prefer parses the Prefer header from h (RFC 7240 with errata),
-// returning a map where keys are lowercase preference names.
+// returning a map where keys are preference names.
 func Prefer(h http.Header) map[string]Pref {
-	var r map[string]Pref
-	for v, vs := iterElems("", h["Prefer"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Prefer"]
+	if values == nil {
+		return nil
+	}
+	r := make(map[string]Pref)
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var name string
 		var pref Pref
 		name, pref.Value, v = consumeParam(v)
@@ -27,10 +29,7 @@ func Prefer(h http.Header) map[string]Pref {
 		if _, seen := r[name]; seen {
 			continue
 		}
-		pref.Value = canonicalizePref(name, pref.Value)
-		if r == nil {
-			r = make(map[string]Pref)
-		}
+		pref.Value = canonicalPref(name, pref.Value)
 		r[name] = pref
 	}
 	return r
@@ -65,21 +64,20 @@ func buildPrefer(prefs map[string]Pref) string {
 }
 
 // PreferenceApplied parses the Preference-Applied header from h (RFC 7240
-// with errata), returning a map where keys are lowercase preference names.
-// Values are also lowercased for preferences known to be case-insensitive,
-// including 'return' and 'handling'.
+// with errata), returning a map where keys are preference names.
 func PreferenceApplied(h http.Header) map[string]string {
-	var r map[string]string
-	for v, vs := iterElems("", h["Preference-Applied"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Preference-Applied"]
+	if values == nil {
+		return nil
+	}
+	r := make(map[string]string)
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var name, value string
 		name, value, v = consumeParam(v)
 		if _, seen := r[name]; seen {
 			continue
 		}
-		value = canonicalizePref(name, value)
-		if r == nil {
-			r = make(map[string]string)
-		}
+		value = canonicalPref(name, value)
 		r[name] = value
 	}
 	return r
@@ -108,7 +106,7 @@ func AddPreferenceApplied(h http.Header, name, value string) {
 	h.Add("Preference-Applied", b.String())
 }
 
-func canonicalizePref(name, value string) string {
+func canonicalPref(name, value string) string {
 	switch name {
 	case "handling", "return":
 		// These preferences are case-insensitive because RFC 7240 defines them

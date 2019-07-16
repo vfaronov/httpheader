@@ -11,18 +11,22 @@ import (
 // any extension attributes are stored in Ext.
 type LinkElem struct {
 	Anchor   *url.URL // usually nil
-	Rel      string   // lowercased
+	Rel      string
 	Target   *url.URL // always non-nil
 	Title    string
-	Type     string   // lowercased
-	HrefLang []string // lowercased
+	Type     string
+	HrefLang []string
 	Media    string
-	Ext      map[string]string // usually nil; keys lowercased
+	Ext      map[string]string
 }
 
 // Link parses the Link header from h (RFC 8288), resolving any relative Target
 // and Anchor URLs against base, which is the URL that h was obtained from
 // (http.Response's Request.URL).
+//
+// In general, callers should check the Anchor of each returned LinkElem:
+// a non-nil Anchor indicates a link pointing "from" another context
+// (not the one that supplied the Link header). See RFC 8288 Section 3.2.
 //
 // Any 'title*' parameter is decoded from RFC 8187 encoding, and overrides 'title'.
 // Similarly for any extension attribute whose name ends in an asterisk.

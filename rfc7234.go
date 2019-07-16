@@ -89,6 +89,15 @@ type CacheDirectives struct {
 	ProxyRevalidate bool
 	Immutable       bool // RFC 8246
 
+	// NoCache is true if the no-cache directive is present without an argument.
+	// If it has an argument -- a list of header names -- these are
+	// stored in NoCacheHeaders, canonicalized with http.CanonicalHeaderKey;
+	// while NoCache remains false. Similarly for the private directive.
+	NoCache        bool
+	Private        bool
+	NoCacheHeaders []string
+	PrivateHeaders []string
+
 	MaxAge               Delta
 	SMaxage              Delta
 	MinFresh             Delta
@@ -99,16 +108,7 @@ type CacheDirectives struct {
 	// is represented as the special very large value Eternity.
 	MaxStale Delta
 
-	// NoCache is true if the no-cache directive is present without an argument.
-	// If it has an argument -- a list of header names -- these are
-	// stored in NoCacheHeaders, canonicalized with http.CanonicalHeaderKey;
-	// while NoCache remains false. Similarly for the private directive.
-	NoCache        bool
-	NoCacheHeaders []string
-	Private        bool
-	PrivateHeaders []string
-
-	// Any unknown extension directives, with keys lowercased.
+	// Any unknown extension directives.
 	// A key mapping to an empty string is serialized to a directive
 	// without an argument.
 	Ext map[string]string
@@ -122,8 +122,8 @@ type Delta struct {
 	ok      bool
 }
 
-// Dur returns the duration of d if it is present; otherwise 0, false.
-func (d Delta) Dur() (dur time.Duration, ok bool) {
+// Value returns the duration of d if it is present; otherwise 0, false.
+func (d Delta) Value() (dur time.Duration, ok bool) {
 	return time.Duration(d.seconds) * time.Second, d.ok
 }
 

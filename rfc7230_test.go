@@ -3,6 +3,7 @@ package httpheader
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 )
 
@@ -12,14 +13,14 @@ func ExampleVia() {
 		"2 edge3.example.net",
 	}}
 	fmt.Print(Via(header))
-	// Output: [{HTTP/1.1 proxy2.example.com:8080 corporate} {HTTP/2 edge3.example.net }]
+	// Output: [{HTTP/1.1 proxy2.example.com:8080 corporate} {HTTP/2.0 edge3.example.net }]
 }
 
 func ExampleAddVia() {
 	header := http.Header{}
 	AddVia(header, ViaElem{ReceivedProto: "HTTP/1.1", ReceivedBy: "api-gw1"})
-	fmt.Print(header)
-	// Output: map[Via:[1.1 api-gw1]]
+	header.Write(os.Stdout)
+	// Output: Via: 1.1 api-gw1
 }
 
 func TestVia(t *testing.T) {
@@ -61,14 +62,8 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": {
-				"HTTP/2 foo",
-				"FSTR/3 bar (some new protocol)",
-			}},
-			[]ViaElem{
-				{"HTTP/2", "foo", ""},
-				{"FSTR/3", "bar", "some new protocol"},
-			},
+			http.Header{"Via": {"FSTR/3 bar (some new protocol)"}},
+			[]ViaElem{{"FSTR/3", "bar", "some new protocol"}},
 		},
 		{
 			http.Header{"Via": {"1.1 foo (comment (with) nesting)"}},
@@ -117,10 +112,10 @@ func TestVia(t *testing.T) {
 			},
 		},
 		{
-			http.Header{"Via": {"2.0 example.com, HTTP/2.0 example.net"}},
+			http.Header{"Via": {"2 example.com, HTTP/2 example.net"}},
 			[]ViaElem{
-				{"HTTP/2", "example.com", ""},
-				{"HTTP/2", "example.net", ""},
+				{"HTTP/2.0", "example.com", ""},
+				{"HTTP/2.0", "example.net", ""},
 			},
 		},
 

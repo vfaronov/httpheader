@@ -7,7 +7,7 @@ import (
 
 // ContentDisposition parses the Content-Disposition header from h (RFC 6266),
 // returning the disposition type, the value of the 'filename' parameter (if any),
-// and a map of any other parameters, with keys (but not values) lowercased.
+// and a map of any other parameters.
 //
 // Any 'filename*' parameter is decoded from RFC 8187 encoding, and overrides
 // 'filename'. Similarly for any other parameter whose name ends in an asterisk.

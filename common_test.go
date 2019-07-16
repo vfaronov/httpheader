@@ -41,17 +41,17 @@ func checkFuzz(t *testing.T, name string, parseFunc, generateFunc interface{}) {
 	generateFuncV := reflect.ValueOf(generateFunc)
 	for i := 0; i < 100; i++ {
 		t.Run("", func(t *testing.T) {
-			r := rand.New(rand.NewSource(int64(i)))
+			rand := rand.New(rand.NewSource(int64(i)))
 			header := http.Header{}
-			n := 1 + r.Intn(3)
+			n := 1 + rand.Intn(3)
 			for i := 0; i < n; i++ {
-				b := make([]byte, r.Intn(64))
-				r.Read(b)
+				b := make([]byte, rand.Intn(64))
+				rand.Read(b)
 				// Bias towards characters that trigger more parser states.
 				for j := range b {
-					if r.Intn(3) == 0 {
+					if rand.Intn(3) == 0 {
 						const punct = "\t \"%'()*,/:;<=>"
-						b[j] = punct[r.Intn(len(punct))]
+						b[j] = punct[rand.Intn(len(punct))]
 					}
 				}
 				header.Add(name, string(b))
@@ -107,55 +107,55 @@ func checkRoundTrip(
 }
 
 // likeExample returns a random value that is recursively structured like ex.
-func likeExample(r *rand.Rand, ex interface{}) interface{} {
+func likeExample(rand *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
 	switch exV.Kind() {
 	case reflect.Bool:
-		return r.Intn(2) == 0
+		return rand.Intn(2) == 0
 	case reflect.Int:
-		return likeInt(r, ex.(int))
+		return likeInt(rand, ex.(int))
 	case reflect.Float32:
-		return randFloat(r)
+		return randFloat(rand)
 	case reflect.String:
-		return likeString(r, ex.(string))
+		return likeString(rand, ex.(string))
 	case reflect.Struct:
 		switch exV.Type() {
 		case reflect.TypeOf(time.Time{}):
-			return randTime(r, !ex.(time.Time).IsZero())
+			return randTime(rand, !ex.(time.Time).IsZero())
 		case reflect.TypeOf(url.URL{}):
-			return randURL(r)
+			return randURL(rand)
 		default:
-			return likeStruct(r, ex)
+			return likeStruct(rand, ex)
 		}
 	case reflect.Ptr:
 		exElem := exV.Elem().Interface()
 		newV := reflect.New(exV.Elem().Type())
-		newV.Elem().Set(reflect.ValueOf(likeExample(r, exElem)))
+		newV.Elem().Set(reflect.ValueOf(likeExample(rand, exElem)))
 		return newV.Interface()
 	case reflect.Slice:
 		switch exV.Type() {
 		case reflect.TypeOf(net.IP{}):
-			return likeIP(r, ex.(net.IP))
+			return likeIP(rand, ex.(net.IP))
 		default:
-			return likeSlice(r, ex)
+			return likeSlice(rand, ex)
 		}
 	case reflect.Map:
-		return likeMap(r, ex)
+		return likeMap(rand, ex)
 	default:
 		panic(fmt.Sprintf("cannot generate value like %#v", ex))
 	}
 }
 
-func likeInt(r *rand.Rand, ex int) int {
+func likeInt(rand *rand.Rand, ex int) int {
 	switch ex {
 	case 9999:
-		return 1000 + r.Intn(9000)
+		return 1000 + rand.Intn(9000)
 	case 999:
-		return 100 + r.Intn(900)
+		return 100 + rand.Intn(900)
 	case 99:
-		return 10 + r.Intn(90)
+		return 10 + rand.Intn(90)
 	case 9:
-		return r.Intn(10)
+		return rand.Intn(10)
 	case 0:
 		return 0
 	default:
@@ -163,17 +163,17 @@ func likeInt(r *rand.Rand, ex int) int {
 	}
 }
 
-func randFloat(r *rand.Rand) float32 {
-	q := r.Float64()
+func randFloat(rand *rand.Rand) float32 {
+	q := rand.Float64()
 	// Truncate to 3 digits after decimal point.
 	q, _ = strconv.ParseFloat(strconv.FormatFloat(q, 'f', 3, 64), 64)
 	return float32(q)
 }
 
-func likeString(r *rand.Rand, ex string) string {
+func likeString(rand *rand.Rand, ex string) string {
 	// like "X | Y" = like "X" or like "Y" at random
 	if exs := strings.Split(ex, " | "); len(exs) > 1 {
-		return likeString(r, exs[r.Intn(len(exs))])
+		return likeString(rand, exs[rand.Intn(len(exs))])
 	}
 	if ex == "empty" {
 		return ""
@@ -192,22 +192,22 @@ func likeString(r *rand.Rand, ex string) string {
 	var s string
 	switch ex {
 	case "token":
-		s = randString(r, tchar)
+		s = randString(rand, tchar)
 	case "token*":
-		s = randString(r, tchar) + "*"
+		s = randString(rand, tchar) + "*"
 	case "Header-Name":
-		s = http.CanonicalHeaderKey(randString(r, tchar))
+		s = http.CanonicalHeaderKey(randString(rand, tchar))
 	case "token/token":
-		s = randString(r, tchar) + "/" + randString(r, tchar)
+		s = randString(rand, tchar) + "/" + randString(rand, tchar)
 	case "quotable":
-		s = randString(r, quotable)
+		s = randString(rand, quotable)
 	case "UTF-8":
-		s = randUTF8(r)
+		s = randUTF8(rand)
 	case "URL":
-		u := randURL(r)
+		u := randURL(rand)
 		s = u.String()
 	case "_obfID":
-		s = "_" + randString(r, alnum+"._-")
+		s = "_" + randString(rand, alnum+"._-")
 	default:
 		panic(fmt.Sprintf("cannot generate string like %q", ex))
 	}
@@ -239,69 +239,71 @@ const (
 		"\x90" // ...and so on to 0xFF, but this should be enough
 )
 
-func randString(r *rand.Rand, alphabet string) string {
-	b := make([]byte, 1+r.Intn(10))
+func randString(rand *rand.Rand, alphabet string) string {
+	b := make([]byte, 1+rand.Intn(10))
 	for i := 0; i < len(b); i++ {
-		b[i] = alphabet[r.Intn(len(alphabet))]
+		b[i] = alphabet[rand.Intn(len(alphabet))]
 	}
 	return string(b)
 }
 
-func randUTF8(r *rand.Rand) string {
-	runes := make([]rune, 1+r.Intn(10))
+func randUTF8(rand *rand.Rand) string {
+	runes := make([]rune, 1+rand.Intn(10))
 	for i := range runes {
-		runes[i] = rune(r.Intn(0xFFFF))
+		runes[i] = rune(rand.Intn(0x10FFFF))
 	}
 	return string(runes)
 }
 
-func randTime(r *rand.Rand, nonzero bool) time.Time {
-	if !nonzero && r.Intn(2) == 0 {
+func randTime(rand *rand.Rand, nonzero bool) time.Time {
+	if !nonzero && rand.Intn(2) == 0 {
 		return time.Time{}
 	}
-	return time.Date(2000+r.Intn(30), time.Month(1+r.Intn(12)), 1+r.Intn(28),
-		r.Intn(24), r.Intn(60), r.Intn(60), 0, time.UTC)
+	return time.Date(
+		2000+rand.Intn(30), time.Month(1+rand.Intn(12)), 1+rand.Intn(28),
+		rand.Intn(24), rand.Intn(60), rand.Intn(60), 0, time.UTC,
+	)
 }
 
-func randURL(r *rand.Rand) url.URL {
-	if r.Intn(5) == 0 {
+func randURL(rand *rand.Rand) url.URL {
+	if rand.Intn(5) == 0 {
 		return url.URL{
 			Scheme: "urn",
-			Opaque: randString(r, alnum+":"),
+			Opaque: randString(rand, alnum+":"),
 		}
 	}
 	return url.URL{
 		Scheme:   "http",
-		Host:     randString(r, loalpha+digit+".-"),
-		Path:     "/" + randString(r, alnum+"-_~+,;=:/"),
-		RawQuery: randString(r, alnum+"&="),
-		Fragment: randString(r, alnum),
+		Host:     randString(rand, loalpha+digit+".-"),
+		Path:     "/" + randString(rand, alnum+"-_~+,;=:/"),
+		RawQuery: randString(rand, alnum+"&="),
+		Fragment: randString(rand, alnum),
 	}
 }
 
-func likeIP(r *rand.Rand, ex net.IP) net.IP {
+func likeIP(rand *rand.Rand, ex net.IP) net.IP {
 	if ex == nil {
 		return nil
 	}
 	var ip net.IP
-	if r.Intn(2) == 0 {
+	if rand.Intn(2) == 0 {
 		ip = make(net.IP, 4)
 	} else {
 		ip = make(net.IP, 16)
 	}
-	r.Read(ip)
+	rand.Read(ip)
 	ip = net.ParseIP(ip.String()) // canonicalize
 	return ip
 }
 
 // likeStruct returns a new struct of the same type as ex,
 // with each field likeExample of ex's value for that field.
-func likeStruct(r *rand.Rand, ex interface{}) interface{} {
+func likeStruct(rand *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
 	newV := reflect.New(exV.Type()).Elem()
 	for i := 0; i < newV.NumField(); i++ {
 		fieldEx := exV.Field(i).Interface()
-		fieldNew := likeExample(r, fieldEx)
+		fieldNew := likeExample(rand, fieldEx)
 		newV.Field(i).Set(reflect.ValueOf(fieldNew))
 	}
 	return newV.Interface()
@@ -309,16 +311,16 @@ func likeStruct(r *rand.Rand, ex interface{}) interface{} {
 
 // likeSlice returns a short slice (nil if empty) of the same type as ex,
 // with each element likeExample of a random one of ex's elements.
-func likeSlice(r *rand.Rand, ex interface{}) interface{} {
+func likeSlice(rand *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
-	n := r.Intn(4)
+	n := rand.Intn(4)
 	if n == 0 {
 		return reflect.Zero(exV.Type()).Interface()
 	}
 	newV := reflect.MakeSlice(exV.Type(), n, n)
 	for i := 0; i < n; i++ {
-		elemEx := exV.Index(r.Intn(exV.Len())).Interface()
-		elemNew := likeExample(r, elemEx)
+		elemEx := exV.Index(rand.Intn(exV.Len())).Interface()
+		elemNew := likeExample(rand, elemEx)
 		newV.Index(i).Set(reflect.ValueOf(elemNew))
 	}
 	return newV.Interface()
@@ -326,19 +328,19 @@ func likeSlice(r *rand.Rand, ex interface{}) interface{} {
 
 // likeMap returns a small map (nil if empty) of the same type as ex,
 // with each key/value pair likeExample of a random one of ex's key/value pairs.
-func likeMap(r *rand.Rand, ex interface{}) interface{} {
+func likeMap(rand *rand.Rand, ex interface{}) interface{} {
 	exV := reflect.ValueOf(ex)
-	n := r.Intn(4)
+	n := rand.Intn(4)
 	if n == 0 {
 		return reflect.Zero(exV.Type()).Interface()
 	}
 	newV := reflect.MakeMap(exV.Type())
 	for i := 0; i < n; i++ {
-		keyExV := exV.MapKeys()[r.Intn(exV.Len())]
+		keyExV := exV.MapKeys()[rand.Intn(exV.Len())]
 		keyEx := keyExV.Interface()
-		keyNew := likeExample(r, keyEx)
+		keyNew := likeExample(rand, keyEx)
 		valueEx := exV.MapIndex(keyExV).Interface()
-		valueNew := likeExample(r, valueEx)
+		valueNew := likeExample(rand, valueEx)
 		newV.SetMapIndex(reflect.ValueOf(keyNew), reflect.ValueOf(valueNew))
 	}
 	return newV.Interface()

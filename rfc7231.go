@@ -36,14 +36,15 @@ func SetAllow(h http.Header, methods []string) {
 // and values are all true. A wildcard (Vary: *) is returned as map[*:true],
 // so it must be checked explicitly.
 func Vary(h http.Header) map[string]bool {
-	var names map[string]bool
-	for v, vs := iterElems("", h["Vary"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Vary"]
+	if values == nil {
+		return nil
+	}
+	names := make(map[string]bool)
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var name string
 		name, v = consumeItem(v)
 		name = http.CanonicalHeaderKey(name)
-		if names == nil {
-			names = make(map[string]bool)
-		}
 		names[name] = true
 	}
 	return names
@@ -204,8 +205,7 @@ func SetRetryAfter(h http.Header, after time.Time) {
 }
 
 // ContentType parses the Content-Type header from h (RFC 7231 Section 3.1.1.5),
-// returning the media type/subtype and any parameters. The type/subtype
-// and parameter names (but not values) are lowercased.
+// returning the media type/subtype and any parameters.
 func ContentType(h http.Header) (mtype string, params map[string]string) {
 	v := h.Get("Content-Type")
 	mtype, v = consumeItem(v)
@@ -225,10 +225,9 @@ func SetContentType(h http.Header, mtype string, params map[string]string) {
 // An AcceptElem represents one element of the Accept header
 // (RFC 7231 Section 5.3.2).
 type AcceptElem struct {
-	Type string  // media range, lowercased
-	Q    float32 // quality value
-	// All map keys are lowercased.
+	Type   string            // media range
 	Params map[string]string // media type parameters (before q)
+	Q      float32           // quality value
 	Ext    map[string]string // extension parameters (after q)
 }
 
@@ -303,8 +302,9 @@ func SetAccept(h http.Header, elems []AcceptElem) {
 
 // MatchAccept searches accept for the element that most closely matches
 // mediaType, according to precedence rules of RFC 7231 Section 5.3.2.
-// Only the bare type/subtype can be matched; elements with Params are
-// not considered. If nothing matches mediaType, a zero AcceptElem is returned.
+// Only the bare type/subtype can be matched with this function;
+// elements with Params are not considered. If nothing matches mediaType,
+// a zero AcceptElem is returned.
 func MatchAccept(accept []AcceptElem, mediaType string) AcceptElem {
 	mediaType = strings.ToLower(mediaType)
 	prefix, _ := consumeTo(mediaType, '/', true) // "text/plain" -> "text/"

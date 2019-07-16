@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 )
 
@@ -30,8 +31,8 @@ func ExampleAddLink() {
 		Rel:    "next",
 		Title:  "Witaj świecie!",
 	})
-	fmt.Print(header)
-	// Output: map[Link:[</articles/124>; rel=next; title*=UTF-8''Witaj%20%C5%9Bwiecie!]]
+	header.Write(os.Stdout)
+	// Output: Link: </articles/124>; rel=next; title*=UTF-8''Witaj%20%C5%9Bwiecie!
 }
 
 const testBase = "http://x.test/a"

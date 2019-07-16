@@ -16,8 +16,7 @@ func decodeExtValue(v string) (string, error) {
 	if charset == "" {
 		return "", errors.New("bad ext-value: no apostrophe")
 	}
-	charset = strings.ToLower(charset)
-	if charset != "utf-8" {
+	if !strings.EqualFold(charset, "UTF-8") {
 		return "", fmt.Errorf("bad ext-value: unsupported charset %s", charset)
 	}
 	_, pctEncoded = consumeTo(v, '\'', false)

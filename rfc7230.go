@@ -7,15 +7,16 @@ import (
 
 // A ViaElem represents one element of the Via header (RFC 7230 Section 5.7.1).
 type ViaElem struct {
-	// ReceivedProto is canonicalized to always
-	// include name: "1.1" becomes "HTTP/1.1".
-	// Special case: "2.0" and "HTTP/2.0" become "HTTP/2".
 	ReceivedProto string
 	ReceivedBy    string
 	Comment       string
 }
 
 // Via parses the Via header from h (RFC 7230 Section 5.7.1).
+//
+// ReceivedProto in returned elements is canonicalized to always include name:
+// ``1.1'' becomes ``HTTP/1.1''. As a special case, ``2'' and ``HTTP/2'' become
+// ``HTTP/2.0''.
 //
 // BUG(vfaronov): Incorrectly parses some extravagant values of uri-host
 // that do not occur in practice but are theoretically admitted by RFC 3986.
@@ -38,16 +39,16 @@ func Via(h http.Header) []ViaElem {
 
 func canonicalProto(proto string) string {
 	// Special-case typical values to avoid allocating them every time.
-	// Also use this opportunity to canonicalize "2.0" to "2".
-	// (See RFC 7540 Errata 4663, and its discussion on ietf-http-wg@w3.org,
-	// for some background on this contentious issue.)
+	// Also use this opportunity to canonicalize "2" to "2.0",
+	// which is what's used by net/http in Request.Proto and Response.Proto
+	// (see also RFC 7540 Errata 4663 and its discussion on ietf-http-wg@w3.org).
 	switch proto {
 	case "1.0":
 		return "HTTP/1.0"
 	case "1.1":
 		return "HTTP/1.1"
-	case "2", "2.0", "HTTP/2.0":
-		return "HTTP/2"
+	case "2.0", "2", "HTTP/2":
+		return "HTTP/2.0"
 	default:
 		if strings.IndexByte(proto, '/') != -1 {
 			return proto

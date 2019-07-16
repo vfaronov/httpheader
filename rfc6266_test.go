@@ -3,6 +3,7 @@ package httpheader
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 )
 
@@ -156,8 +157,8 @@ func TestContentDisposition(t *testing.T) {
 func ExampleSetContentDisposition() {
 	header := http.Header{}
 	SetContentDisposition(header, "attachment", "Résumé.docx", nil)
-	fmt.Print(header)
-	// Output: map[Content-Disposition:[attachment; filename*=UTF-8''R%C3%A9sum%C3%A9.docx]]
+	header.Write(os.Stdout)
+	// Output: Content-Disposition: attachment; filename*=UTF-8''R%C3%A9sum%C3%A9.docx
 }
 
 func TestSetContentDisposition(t *testing.T) {

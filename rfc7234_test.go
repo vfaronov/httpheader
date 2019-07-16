@@ -3,6 +3,7 @@ package httpheader
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 )
@@ -16,8 +17,8 @@ func ExampleWarning() {
 func ExampleAddWarning() {
 	header := http.Header{}
 	AddWarning(header, WarningElem{Code: 299, Text: "this service is deprecated"})
-	fmt.Print(header)
-	// Output: map[Warning:[299 - "this service is deprecated"]]
+	header.Write(os.Stdout)
+	// Output: Warning: 299 - "this service is deprecated"
 }
 
 func TestWarning(t *testing.T) {
@@ -210,7 +211,8 @@ func BenchmarkWarningComplex(b *testing.B) {
 func ExampleCacheControl() {
 	ourAge := time.Duration(10) * time.Minute
 	header := http.Header{"Cache-Control": {"max-age=300, must-revalidate"}}
-	if maxAge, ok := CacheControl(header).MaxAge.Dur(); ok && ourAge > maxAge {
+	cc := CacheControl(header)
+	if maxAge, ok := cc.MaxAge.Value(); ok && ourAge > maxAge {
 		fmt.Println("our copy is stale")
 	}
 	// Output: our copy is stale
@@ -223,8 +225,8 @@ func ExampleSetCacheControl() {
 		MaxAge: DeltaSeconds(600),
 		Ext:    map[string]string{"priority": "5"},
 	})
-	fmt.Println(header)
-	// Output: map[Cache-Control:[public, max-age=600, priority=5]]
+	header.Write(os.Stdout)
+	// Output: Cache-Control: public, max-age=600, priority=5
 }
 
 func TestCacheControl(t *testing.T) {

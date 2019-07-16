@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"testing"
 )
 
@@ -25,8 +26,8 @@ func ExampleAddForwarded() {
 		For:   Node{IP: net.IPv4(203, 0, 113, 195)},
 		Proto: "https",
 	})
-	fmt.Print(header)
-	// Output: map[Forwarded:[for=203.0.113.195;proto=https]]
+	header.Write(os.Stdout)
+	// Output: Forwarded: for=203.0.113.195;proto=https
 }
 
 func TestForwarded(t *testing.T) {
