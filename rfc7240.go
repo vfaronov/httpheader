@@ -27,9 +27,7 @@ func Prefer(h http.Header) map[string]Pref {
 		if _, seen := r[name]; seen {
 			continue
 		}
-		if name == "return" || name == "handling" {
-			pref.Value = strings.ToLower(pref.Value)
-		}
+		pref.Value = canonicalizePref(name, pref.Value)
 		if r == nil {
 			r = make(map[string]Pref)
 		}
@@ -64,4 +62,58 @@ func buildPrefer(prefs map[string]Pref) string {
 		writeNullableParams(b, pref.Params)
 	}
 	return b.String()
+}
+
+// PreferenceApplied parses the Preference-Applied header from h (RFC 7240
+// with errata), returning a map where keys are lowercase preference names.
+// Values are also lowercased for preferences known to be case-insensitive,
+// including 'return' and 'handling'.
+func PreferenceApplied(h http.Header) map[string]string {
+	var r map[string]string
+	for v, vs := iterElems("", h["Preference-Applied"]); v != ""; v, vs = iterElems(v, vs) {
+		var name, value string
+		name, value, v = consumeParam(v)
+		if _, seen := r[name]; seen {
+			continue
+		}
+		value = canonicalizePref(name, value)
+		if r == nil {
+			r = make(map[string]string)
+		}
+		r[name] = value
+	}
+	return r
+}
+
+// SetPreferenceApplied replaces the Preference-Applied header in h.
+// See also AddPreferenceApplied.
+func SetPreferenceApplied(h http.Header, prefs map[string]string) {
+	if len(prefs) == 0 {
+		h.Del("Preference-Applied")
+		return
+	}
+	b := &strings.Builder{}
+	var wrote bool
+	for name, value := range prefs {
+		wrote = writeDirective(b, wrote, name, value)
+	}
+	h.Set("Preference-Applied", b.String())
+}
+
+// AddPreferenceApplied appends the name=value preference
+// to the Preference-Applied header in h.
+func AddPreferenceApplied(h http.Header, name, value string) {
+	b := &strings.Builder{}
+	writeDirective(b, false, name, value)
+	h.Add("Preference-Applied", b.String())
+}
+
+func canonicalizePref(name, value string) string {
+	switch name {
+	case "handling", "return":
+		// These preferences are case-insensitive because RFC 7240 defines them
+		// with ABNF's case-insensitive literal strings (RFC 5234 Section 2.3).
+		value = strings.ToLower(value)
+	}
+	return value
 }

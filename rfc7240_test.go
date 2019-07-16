@@ -3,6 +3,7 @@ package httpheader
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 )
 
@@ -259,3 +260,92 @@ func BenchmarkPreferComplex(b *testing.B) {
 		Prefer(header)
 	}
 }
+
+func TestPreferenceApplied(t *testing.T) {
+	tests := []struct {
+		header http.Header
+		result map[string]string
+	}{
+		// Valid headers.
+		{
+			http.Header{},
+			nil,
+		},
+		{
+			http.Header{"Preference-Applied": {"Handling=Lenient, Foo=Bar"}},
+			map[string]string{"handling": "lenient", "foo": "Bar"},
+		},
+		{
+			http.Header{"Preference-Applied": {`foo="bar, baz;qux=xyzzy"`}},
+			map[string]string{"foo": "bar, baz;qux=xyzzy"},
+		},
+		{
+			http.Header{"Preference-Applied": {"respond-async,depth-noroot"}},
+			map[string]string{"respond-async": "", "depth-noroot": ""},
+		},
+
+		// Invalid headers.
+		// Precise outputs on them are not a guaranteed part of the API.
+		// They may change as convenient for the parsing code.
+		{
+			http.Header{"Preference-Applied": {"foo;bar=baz,qux=xyzzy"}},
+			map[string]string{"foo": "", "qux": "xyzzy"},
+		},
+		{
+			http.Header{"Preference-Applied": {`foo;bar="baz,qux",xyzzy`}},
+			map[string]string{"foo": "", `qux"`: "", "xyzzy": ""},
+		},
+		{
+			http.Header{"Preference-Applied": {"foo=bar=baz"}},
+			map[string]string{"foo": "bar"},
+		},
+		{
+			http.Header{"Preference-Applied": {";foo=bar;baz=qux"}},
+			map[string]string{"foo": "bar"},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			checkParse(t, test.header, test.result, PreferenceApplied(test.header))
+		})
+	}
+}
+
+func TestPreferenceAppliedFuzz(t *testing.T) {
+	checkFuzz(t, "Preference-Applied", PreferenceApplied, SetPreferenceApplied)
+}
+
+func TestPreferenceAppliedRoundTrip(t *testing.T) {
+	checkRoundTrip(t, SetPreferenceApplied, PreferenceApplied,
+		map[string]string{"lower token": "quotable | empty"},
+	)
+}
+
+func ExampleAddPreferenceApplied() {
+	request := http.Header{"Prefer": {"handling=lenient, return=minimal"}}
+	prefer := Prefer(request)
+
+	newContents := updateDocument()
+
+	response := http.Header{}
+
+	switch prefer["return"].Value {
+	case "representation":
+		AddPreferenceApplied(response, "return", "representation")
+		fmt.Println("Status: 200 OK")
+		response.Write(os.Stdout)
+		fmt.Println(newContents)
+
+	case "minimal":
+		AddPreferenceApplied(response, "return", "minimal")
+		fallthrough
+	default:
+		fmt.Println("Status: 204 No Content")
+		response.Write(os.Stdout)
+	}
+	// Output: Status: 204 No Content
+	// Preference-Applied: return=minimal
+}
+
+// Dummy for the example above.
+func updateDocument() string { return "" }
