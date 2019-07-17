@@ -75,6 +75,20 @@ func TestIfMatch(t *testing.T) {
 	}
 }
 
+func ExampleIfNoneMatch() {
+	serverTag := EntityTag{Weak: true, Opaque: "v.62"}
+	request := http.Header{"If-None-Match": {`W/"v.57", W/"v.62", "f09a3ccd"`}}
+	response := http.Header{}
+	if MatchWeak(IfNoneMatch(request), serverTag) {
+		fmt.Println("Status: 304 Not Modified")
+		SetETag(response, serverTag)
+		return
+	}
+	fmt.Println("Status: 200 OK")
+	SetETag(response, serverTag)
+	// Output: Status: 304 Not Modified
+}
+
 func TestSetETag(t *testing.T) {
 	tests := []struct {
 		input  EntityTag
@@ -100,20 +114,6 @@ func TestSetETag(t *testing.T) {
 			checkGenerate(t, test.input, test.result, header)
 		})
 	}
-}
-
-func ExampleMatchWeak() {
-	serverTag := EntityTag{Weak: true, Opaque: "v.62"}
-	request := http.Header{"If-None-Match": {`W/"v.57", W/"v.62", "f09a3ccd"`}}
-	response := http.Header{}
-	if MatchWeak(IfNoneMatch(request), serverTag) {
-		fmt.Println("Status: 304 Not Modified")
-		SetETag(response, serverTag)
-		return
-	}
-	fmt.Println("Status: 200 OK")
-	SetETag(response, serverTag)
-	// Output: Status: 304 Not Modified
 }
 
 func TestMatch(t *testing.T) {

@@ -9,17 +9,6 @@ import (
 	"time"
 )
 
-func ExampleAllow() {
-	header := http.Header{"Allow": {"GET, HEAD, OPTIONS"}}
-	fmt.Print(Allow(header))
-	// Output: [GET HEAD OPTIONS]
-}
-
-func ExampleSetAllow() {
-	header := http.Header{}
-	SetAllow(header, []string{"GET", "HEAD", "OPTIONS"})
-}
-
 func TestAllowFuzz(t *testing.T) {
 	checkFuzz(t, "Allow", Allow, SetAllow)
 }
@@ -153,12 +142,6 @@ func TestVary(t *testing.T) {
 	}
 }
 
-func ExampleAddVary() {
-	header := http.Header{}
-	AddVary(header, map[string]bool{"Accept": true, "Accept-Encoding": true})
-	// Output:
-}
-
 func TestVaryFuzz(t *testing.T) {
 	checkFuzz(t, "Vary", Vary, SetVary)
 }
@@ -168,12 +151,6 @@ func BenchmarkVary(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Vary(header)
 	}
-}
-
-func ExampleUserAgent() {
-	header := http.Header{"User-Agent": {"Mozilla/5.0 (compatible) Chrome/123"}}
-	fmt.Printf("%+v", UserAgent(header))
-	// Output: [{Name:Mozilla Version:5.0 Comment:compatible} {Name:Chrome Version:123 Comment:}]
 }
 
 func TestUserAgent(t *testing.T) {
@@ -410,13 +387,6 @@ func TestRetryAfterFuzz(t *testing.T) {
 	checkFuzz(t, "Retry-After", RetryAfter, SetRetryAfter)
 }
 
-func ExampleContentType() {
-	header := http.Header{"Content-Type": {"Text/HTML;Charset=UTF-8"}}
-	mtype, params := ContentType(header)
-	fmt.Println(mtype, params)
-	// Output: text/html map[charset:UTF-8]
-}
-
 func TestContentType(t *testing.T) {
 	tests := []struct {
 		header http.Header
@@ -566,17 +536,15 @@ func TestContentTypeRoundTrip(t *testing.T) {
 	)
 }
 
-func ExampleSetContentType() {
-	header := http.Header{}
-	SetContentType(header, "text/html", map[string]string{"charset": "utf-8"})
-	header.Write(os.Stdout)
-	// Output: Content-Type: text/html;charset=utf-8
-}
-
 func ExampleAccept() {
-	header := http.Header{"Accept": {"Text/HTML; charset=utf-8; q=1; validate=yes"}}
-	fmt.Printf("%+v", Accept(header))
-	// Output: [{Type:text/html Params:map[charset:utf-8] Q:1 Ext:map[validate:yes]}]
+	header := http.Header{"Accept": {"text/html, text/*;q=0.1"}}
+	accept := Accept(header)
+	fmt.Println(MatchAccept(accept, "text/html").Q)
+	fmt.Println(MatchAccept(accept, "text/plain").Q)
+	fmt.Println(MatchAccept(accept, "image/gif").Q)
+	// Output: 1
+	// 0.1
+	// 0
 }
 
 func TestAccept(t *testing.T) {
@@ -1045,17 +1013,6 @@ func TestAcceptRoundTrip(t *testing.T) {
 			Ext:    map[string]string{"lower token without q": "quotable | empty"},
 		}},
 	)
-}
-
-func ExampleMatchAccept() {
-	header := http.Header{"Accept": {"text/html, text/*;q=0.1"}}
-	accept := Accept(header)
-	fmt.Println(MatchAccept(accept, "text/html").Q)
-	fmt.Println(MatchAccept(accept, "text/plain").Q)
-	fmt.Println(MatchAccept(accept, "image/gif").Q)
-	// Output: 1
-	// 0.1
-	// 0
 }
 
 func TestMatchAccept(t *testing.T) {

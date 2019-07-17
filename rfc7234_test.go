@@ -8,12 +8,6 @@ import (
 	"time"
 )
 
-func ExampleWarning() {
-	header := http.Header{"Warning": {`214 proxy1 "removed tracking pixels"`}}
-	fmt.Printf("%+v", Warning(header))
-	// Output: [{Code:214 Agent:proxy1 Text:removed tracking pixels Date:0001-01-01 00:00:00 +0000 UTC}]
-}
-
 func ExampleAddWarning() {
 	header := http.Header{}
 	AddWarning(header, WarningElem{Code: 299, Text: "this service is deprecated"})

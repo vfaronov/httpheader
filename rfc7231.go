@@ -53,15 +53,6 @@ func Vary(h http.Header) map[string]bool {
 // SetVary replaces the Vary header in h.
 // Names mapping to false are ignored. See also AddVary.
 func SetVary(h http.Header, names map[string]bool) {
-	h.Set("Vary", buildVary(names))
-}
-
-// AddVary is like SetVary but appends instead of replacing.
-func AddVary(h http.Header, names map[string]bool) {
-	h.Add("Vary", buildVary(names))
-}
-
-func buildVary(names map[string]bool) string {
 	b := &strings.Builder{}
 	for name, value := range names {
 		if !value {
@@ -72,7 +63,15 @@ func buildVary(names map[string]bool) string {
 		}
 		write(b, name)
 	}
-	return b.String()
+	h.Set("Vary", b.String())
+}
+
+// AddVary appends the given names to the Vary header in h.
+func AddVary(h http.Header, names ...string) {
+	if len(names) == 0 {
+		return
+	}
+	h.Add("Vary", strings.Join(names, ", "))
 }
 
 // A Product contains software information as found in the User-Agent

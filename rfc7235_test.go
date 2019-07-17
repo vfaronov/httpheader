@@ -1,23 +1,10 @@
 package httpheader
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"testing"
 )
-
-func ExampleWWWAuthenticate() {
-	header := http.Header{"Www-Authenticate": {
-		`Basic realm="secure storage"`,
-		`Digest realm="secure storage", nonce="7ypf9xlj"`,
-	}}
-	for _, challenge := range WWWAuthenticate(header) {
-		fmt.Printf("%+v\n", challenge)
-	}
-	// Output: {Scheme:basic Token: Realm:secure storage Params:map[]}
-	// {Scheme:digest Token: Realm:secure storage Params:map[nonce:7ypf9xlj]}
-}
 
 func TestWWWAuthenticate(t *testing.T) {
 	tests := []struct {
@@ -499,10 +486,7 @@ func TestAuthorization(t *testing.T) {
 
 func ExampleSetAuthorization() {
 	header := http.Header{}
-	SetAuthorization(header, Auth{
-		Scheme: "Bearer",
-		Token:  "wvmjsa9N0iyLjnFo",
-	})
+	SetAuthorization(header, Auth{Scheme: "Bearer", Token: "wvmjsa9N0iyLjnFo"})
 	header.Write(os.Stdout)
 	// Output: Authorization: Bearer wvmjsa9N0iyLjnFo
 }

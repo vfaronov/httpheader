@@ -3,7 +3,6 @@ package httpheader
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 )
 
@@ -320,32 +319,3 @@ func TestPreferenceAppliedRoundTrip(t *testing.T) {
 		map[string]string{"lower token": "quotable | empty"},
 	)
 }
-
-func ExampleAddPreferenceApplied() {
-	request := http.Header{"Prefer": {"handling=lenient, return=minimal"}}
-	prefer := Prefer(request)
-
-	newContents := updateDocument()
-
-	response := http.Header{}
-
-	switch prefer["return"].Value {
-	case "representation":
-		AddPreferenceApplied(response, "return", "representation")
-		fmt.Println("Status: 200 OK")
-		response.Write(os.Stdout)
-		fmt.Println(newContents)
-
-	case "minimal":
-		AddPreferenceApplied(response, "return", "minimal")
-		fallthrough
-	default:
-		fmt.Println("Status: 204 No Content")
-		response.Write(os.Stdout)
-	}
-	// Output: Status: 204 No Content
-	// Preference-Applied: return=minimal
-}
-
-// Dummy for the example above.
-func updateDocument() string { return "" }

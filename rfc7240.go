@@ -36,31 +36,18 @@ func Prefer(h http.Header) map[string]Pref {
 }
 
 // SetPrefer replaces the Prefer header in h (RFC 7240 with errata).
-// See also AddPrefer.
 func SetPrefer(h http.Header, prefs map[string]Pref) {
 	if len(prefs) == 0 {
 		h.Del("Prefer")
 		return
 	}
-	h.Set("Prefer", buildPrefer(prefs))
-}
-
-// AddPrefer is like SetPrefer but appends instead of replacing.
-func AddPrefer(h http.Header, prefs map[string]Pref) {
-	if len(prefs) == 0 {
-		return
-	}
-	h.Add("Prefer", buildPrefer(prefs))
-}
-
-func buildPrefer(prefs map[string]Pref) string {
 	b := &strings.Builder{}
 	var wrote bool
 	for name, pref := range prefs {
 		wrote = writeDirective(b, wrote, name, pref.Value)
 		writeNullableParams(b, pref.Params)
 	}
-	return b.String()
+	h.Set("Prefer", b.String())
 }
 
 // PreferenceApplied parses the Preference-Applied header from h (RFC 7240
@@ -84,7 +71,6 @@ func PreferenceApplied(h http.Header) map[string]string {
 }
 
 // SetPreferenceApplied replaces the Preference-Applied header in h.
-// See also AddPreferenceApplied.
 func SetPreferenceApplied(h http.Header, prefs map[string]string) {
 	if len(prefs) == 0 {
 		h.Del("Preference-Applied")
@@ -96,14 +82,6 @@ func SetPreferenceApplied(h http.Header, prefs map[string]string) {
 		wrote = writeDirective(b, wrote, name, value)
 	}
 	h.Set("Preference-Applied", b.String())
-}
-
-// AddPreferenceApplied appends the name=value preference
-// to the Preference-Applied header in h.
-func AddPreferenceApplied(h http.Header, name, value string) {
-	b := &strings.Builder{}
-	writeDirective(b, false, name, value)
-	h.Add("Preference-Applied", b.String())
 }
 
 func canonicalPref(name, value string) string {
