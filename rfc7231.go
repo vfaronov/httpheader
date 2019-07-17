@@ -209,7 +209,7 @@ func ContentType(h http.Header) (mtype string, params map[string]string) {
 	v := h.Get("Content-Type")
 	mtype, v = consumeItem(v)
 	mtype = strings.ToLower(mtype)
-	params, v = consumeParams(v)
+	params, _ = consumeParams(v)
 	return
 }
 

@@ -1,0 +1,12 @@
+linters:
+  enable:
+    - gocritic
+    - goimports
+    - maligned
+    - misspell
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

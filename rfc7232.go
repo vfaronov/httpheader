@@ -7,10 +7,10 @@ import (
 
 // An EntityTag is an opaque entity tag (RFC 7232 Section 2.3).
 type EntityTag struct {
+	wildcard bool
+
 	Weak   bool
 	Opaque string // not including double quotes
-
-	wildcard bool
 }
 
 // AnyTag represents a wildcard (*) in an If-Match or If-None-Match header.

@@ -1,22 +1,19 @@
-.PHONY: check checkfmt fmt vet test coverhtml example
-
-check: checkfmt vet test
-
-checkfmt:
-	test -z "$$(find . -type f -name '*.go' -exec gofmt -s -d {} \;)"
-
-fmt:
-	find . -type f -name '*.go' -exec gofmt -s -w {} \;
-
-vet:
-	go vet .
+.PHONY: test lint qa coverhtml fmt example
 
 test:
 	go test -cover .
 
+lint:
+	golangci-lint run
+
+qa: test lint
+
 coverhtml:
 	go test -coverprofile=cover.out .
 	go tool cover -html=cover.out
+
+fmt:
+	find . -type f -name '*.go' -exec gofmt -s -w {} \;
 
 example:
 # Replace the example in README.md with tested code.
