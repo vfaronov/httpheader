@@ -147,9 +147,7 @@ ParamsLoop:
 func detectAuthParam(v string) bool {
 	// An auth-param always has an equal sign after the first token,
 	// but a challenge never does.
-	for peek(v) == ' ' || peek(v) == '\t' || peek(v) == ',' {
-		v = v[1:]
-	}
+	v = skipWSAnd(v, ',')
 	_, v = consumeItem(v)
 	return peek(skipWS(v)) == '='
 }

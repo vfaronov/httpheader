@@ -17,7 +17,7 @@ admits an arbitrary quoted string or comment (RFC 7230 Section 3.2.6), such as
 in parameter values.
 
 Tokens that are known to be case-insensitive, like directive or parameter names,
-are lowercased by FooBar (but not by SetFooBar/AddFooBar). Any slices or maps
-returned by FooBar may be nil when there is no corresponding input data.
+are lowercased by FooBar. Any slices or maps returned by FooBar may be nil
+when there is no corresponding input data.
 */
 package httpheader

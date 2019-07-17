@@ -17,8 +17,8 @@ fmt:
 
 example:
 # Replace the example in README.md with tested code.
-	sed '/^## Example/,$$d' README.md >new.README.md
-	echo '## Example' >>new.README.md
-	echo '' >>new.README.md
-	sed -n 's/^/\t/; /const request/,$$p' example_test.go >>new.README.md
-	mv -f new.README.md README.md
+	sed '/^## Example/,$$d' README.md >README.new.md
+	echo '## Example' >>README.new.md
+	echo '' >>README.new.md
+	sed -n '/^}/d; s/^\t//; s/^/\t/; /const/,$$p' example_test.go >>README.new.md
+	mv -f README.new.md README.md

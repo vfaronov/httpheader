@@ -75,6 +75,13 @@ func skipWS(v string) string {
 	return v
 }
 
+func skipWSAnd(v string, and byte) string {
+	for v != "" && (v[0] == ' ' || v[0] == '\t' || v[0] == and) {
+		v = v[1:]
+	}
+	return v
+}
+
 // consumeTo returns any text from v up to (and possibly including) the first
 // occurrence of delim, and the rest of v. If delim does not occur in v,
 // it consumes the entire v.
@@ -89,10 +96,16 @@ func consumeTo(v string, delim byte, including bool) (text, newv string) {
 	return v[:pos], v[pos+1:]
 }
 
+// consumeQuoted returns the text of the quoted string (RFC 7230 Section 3.2.6)
+// at the beginning of v (with any quoted pairs replaced), and the rest of v after
+// the closing quote. If the quoted string is not terminated properly (e.g. because
+// the closing quote is erroneously escaped as a quoted pair), it consumes
+// the entire v. If v doesn't start with a double quote, it consumes nothing.
 func consumeQuoted(v string) (text, newv string) {
 	return consumeDelimited(v, '"', '"')
 }
 
+// consumeComment is like consumeQuoted but for comments (possibly nested).
 func consumeComment(v string) (text, newv string) {
 	return consumeDelimited(v, '(', ')')
 }
@@ -120,12 +133,12 @@ func consumeDelimited(v string, opener, closer byte) (text, newv string) {
 			goto buffered
 		}
 	}
-	// Unterminated string.
+	// We've reached the end of v, but nesting is still > 0.
+	// This is an unterminated string.
 	return v, ""
 
 buffered:
-	// But once we have encountered a quoted pair,
-	// we have to unquote into a buffer.
+	// Once we have encountered a quoted pair, we have to unquote into a buffer.
 	b := &strings.Builder{}
 	b.WriteString(v[:i])
 	quoted := false
@@ -149,7 +162,8 @@ buffered:
 			b.WriteByte(v[i])
 		}
 	}
-	// Unterminated string.
+	// We've reached the end of v, but nesting is still > 0.
+	// This is an unterminated string.
 	return b.String(), ""
 }
 
@@ -221,10 +235,7 @@ func consumeParams(v string) (params map[string]string, newv string) {
 }
 
 func consumeParam(v string) (name, value, newv string) {
-	v = skipWS(v)
-	for peek(v) == ';' {
-		v = skipWS(v[1:])
-	}
+	v = skipWSAnd(v, ';')
 	name, v = consumeItem(v)
 	if name == "" {
 		return "", "", v

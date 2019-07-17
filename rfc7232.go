@@ -25,7 +25,7 @@ var AnyTag = EntityTag{wildcard: true}
 // with commas for If-Match/If-None-Match.
 func SetETag(h http.Header, tag EntityTag) {
 	b := &strings.Builder{}
-	b.Grow(len(tag.Opaque) + 4)
+	b.Grow(2 + 1 + len(tag.Opaque) + 1)
 	if tag.Weak {
 		write(b, "W/")
 	}
