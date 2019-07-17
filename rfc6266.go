@@ -28,7 +28,7 @@ ParamsLoop:
 				filename = value
 			}
 		case "filename*":
-			if decoded, err := decodeExtValue(value); err == nil {
+			if decoded, _, err := DecodeExtValue(value); err == nil {
 				filename = decoded
 			}
 		default:

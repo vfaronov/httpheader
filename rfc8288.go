@@ -101,7 +101,7 @@ LinksLoop:
 				if seenTitleStar {
 					continue
 				}
-				if decoded, err := decodeExtValue(value); err == nil {
+				if decoded, _, err := DecodeExtValue(value); err == nil {
 					link.Title = decoded
 				}
 				seenTitleStar = true

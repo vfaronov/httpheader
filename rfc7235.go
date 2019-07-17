@@ -12,6 +12,9 @@ import (
 // Realm is the value of the 'realm' parameter, if any. Sending an empty realm=""
 // is not supported, and any 'realm' key in Params is ignored.
 //
+// "Star" parameters like RFC 7616's 'username*' are not treated specially.
+// Call DecodeExtValue and EncodeExtValue manually if needed.
+//
 // Scheme names are case-insensitive according to RFC 7235, but many
 // implementations erroneously expect them to be in their canonical spelling
 // as given in https://www.iana.org/assignments/http-authschemes/.

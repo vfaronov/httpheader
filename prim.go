@@ -283,7 +283,7 @@ func insertVariform(params map[string]string, name, value string) map[string]str
 	}
 	if strings.HasSuffix(name, "*") {
 		plainName := name[:len(name)-1]
-		if decoded, err := decodeExtValue(value); err == nil {
+		if decoded, _, err := DecodeExtValue(value); err == nil {
 			params[plainName] = decoded
 		}
 	} else if params[name] == "" { // not filled in from 'name*' yet
@@ -334,11 +334,11 @@ func writeVariform(b *strings.Builder, name, value string) {
 		write(b, "=")
 		writeQuoted(b, value)
 		write(b, "; filename*=")
-		writeExtValue(b, value)
+		writeExtValue(b, value, "")
 
 	case quotedOK:
 		write(b, "*=")
-		writeExtValue(b, value)
+		writeExtValue(b, value, "")
 		write(b, "; ", name, "=")
 		writeQuoted(b, value)
 
@@ -347,6 +347,6 @@ func writeVariform(b *strings.Builder, name, value string) {
 	// as ISO-8859-1), we send only the ext-value.
 	default:
 		write(b, "*=")
-		writeExtValue(b, value)
+		writeExtValue(b, value, "")
 	}
 }

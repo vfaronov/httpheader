@@ -7,37 +7,40 @@ import (
 	"strings"
 )
 
-// decodeExtValue decodes an ext-value as specified in RFC 8187.
-// UTF-8 obtained after percent-decoding is not validated.
-// Language tags are ignored. ISO-8859-1 is not supported.
-func decodeExtValue(v string) (string, error) {
+// DecodeExtValue decodes the given ext-value (RFC 8187) into its text
+// and language tag, both of which may be empty. Only ext-values marked as UTF-8
+// are supported, and the actual decoded UTF-8 is not validated.
+func DecodeExtValue(v string) (text, lang string, err error) {
 	var charset, pctEncoded string
 	charset, v = consumeTo(v, '\'', false)
-	if charset == "" {
-		return "", errors.New("bad ext-value: no apostrophe")
+	if v == "" {
+		return "", "", errors.New("bad ext-value: missing apostrophe")
 	}
 	if !strings.EqualFold(charset, "UTF-8") {
-		return "", fmt.Errorf("bad ext-value: unsupported charset %s", charset)
+		return "", "", fmt.Errorf("bad ext-value: unsupported charset %q", charset)
 	}
-	_, pctEncoded = consumeTo(v, '\'', false)
-	if pctEncoded == v {
-		return "", fmt.Errorf("bad ext-value: no second apostrophe")
+	lang, pctEncoded = consumeTo(v, '\'', false)
+	if lang == v {
+		return "", "", errors.New("bad ext-value: missing apostrophe")
 	}
-	decoded, err := url.PathUnescape(pctEncoded)
-	if err != nil {
-		return "", err
-	}
-	return decoded, nil
+	lang = strings.ToLower(lang)
+	text, err = url.PathUnescape(pctEncoded)
+	return
 }
 
-// writeExtValue encodes s, which may contain any valid UTF-8, into an ext-value,
-// as specified in RFC 8187, and writes the ext-value into b.
-func writeExtValue(b *strings.Builder, s string) {
-	const prefix = "UTF-8''"
-	b.Grow(len(prefix) + len(s)) // need at least this many bytes
-	b.WriteString(prefix)
-	for i := 0; i < len(s); i++ {
-		b.WriteString(pctEncoding[s[i]])
+// EncodeExtValue encodes text, which must be valid UTF-8, into an ext-value
+// (RFC 8187) with the given lang tag. Both text and lang may be empty.
+func EncodeExtValue(text, lang string) string {
+	b := &strings.Builder{}
+	writeExtValue(b, text, lang)
+	return b.String()
+}
+
+func writeExtValue(b *strings.Builder, text, lang string) {
+	b.Grow(6 + len(lang) + 1 + len(text)) // need at least this many bytes
+	write(b, "UTF-8'", lang, "'")
+	for i := 0; i < len(text); i++ {
+		write(b, pctEncoding[text[i]])
 	}
 }
 

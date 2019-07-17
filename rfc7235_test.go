@@ -577,6 +577,17 @@ func TestSetAuthorization(t *testing.T) {
 			},
 			http.Header{"Authorization": {`Digest realm="Hello", qop=auth`}},
 		},
+		{
+			// As documented, we can use EncodeExtValue manually
+			// to send 'username*'.
+			Auth{
+				Scheme: "Digest",
+				Params: map[string]string{
+					"username*": EncodeExtValue("Васян", "ru"),
+				},
+			},
+			http.Header{"Authorization": {`Digest username*=UTF-8'ru'%D0%92%D0%B0%D1%81%D1%8F%D0%BD`}},
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
