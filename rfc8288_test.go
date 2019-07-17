@@ -497,10 +497,11 @@ func TestSetLink(t *testing.T) {
 					Title:    "Privacy",
 					Type:     "application/xhtml+xml",
 					HrefLang: []string{"en-US", "en-GB"},
+					Media:    "screen",
 					Ext:      map[string]string{"foo": "bar"},
 				},
 			},
-			http.Header{"Link": {`<https://example.com/privacy>; anchor="https://example.com/"; rel=privacy-policy; title="Privacy"; type="application/xhtml+xml"; hreflang=en-US; hreflang=en-GB; foo=bar`}},
+			http.Header{"Link": {`<https://example.com/privacy>; anchor="https://example.com/"; rel=privacy-policy; title="Privacy"; type="application/xhtml+xml"; hreflang=en-US; hreflang=en-GB; media=screen; foo=bar`}},
 		},
 		{
 			[]LinkElem{

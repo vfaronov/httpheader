@@ -142,6 +142,25 @@ func TestVary(t *testing.T) {
 	}
 }
 
+func TestSetVary(t *testing.T) {
+	tests := []struct {
+		input  map[string]bool
+		result http.Header
+	}{
+		{
+			map[string]bool{"Accept": true, "Accept-Language": false},
+			http.Header{"Vary": {"Accept"}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			header := http.Header{}
+			SetVary(header, test.input)
+			checkGenerate(t, test.input, test.result, header)
+		})
+	}
+}
+
 func TestVaryFuzz(t *testing.T) {
 	checkFuzz(t, "Vary", Vary, SetVary)
 }
@@ -521,6 +540,28 @@ func TestContentType(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			mtype, params := ContentType(test.header)
 			checkParse(t, test.header, test.mtype, mtype, test.params, params)
+		})
+	}
+}
+
+func TestSetContentType(t *testing.T) {
+	tests := []struct {
+		mtype  string
+		params map[string]string
+		result http.Header
+	}{
+		{
+			"text/html",
+			map[string]string{"charset": "utf-8"},
+			http.Header{"Content-Type": {"text/html;charset=utf-8"}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			input := []interface{}{test.mtype, test.params}
+			header := http.Header{}
+			SetContentType(header, test.mtype, test.params)
+			checkGenerate(t, input, test.result, header)
 		})
 	}
 }

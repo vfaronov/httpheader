@@ -180,6 +180,10 @@ func TestSetContentDisposition(t *testing.T) {
 				"attachment; filename*=UTF-8''b%C3%A1z.txt",
 			}},
 		},
+		{
+			"inline", "", map[string]string{"foo": "bar baz"},
+			http.Header{"Content-Disposition": {`inline; foo="bar baz"`}},
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {

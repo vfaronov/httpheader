@@ -321,8 +321,10 @@ func TestSetForwarded(t *testing.T) {
 			http.Header{"Forwarded": {"for=unknown, for=unknown"}},
 		},
 		{
-			[]ForwardedElem{{By: Node{Port: 8080}}, {}},
-			http.Header{"Forwarded": {`by="unknown:8080", for=unknown`}},
+			[]ForwardedElem{{By: Node{Port: 8080}, Host: "example.com"}, {}},
+			http.Header{"Forwarded": {
+				`by="unknown:8080";host=example.com, for=unknown`,
+			}},
 		},
 		{
 			[]ForwardedElem{
@@ -346,6 +348,12 @@ func TestSetForwarded(t *testing.T) {
 				{For: Node{Port: 44831, ObfuscatedPort: "_a"}},
 			},
 			http.Header{"Forwarded": {`for="unknown:44831"`}},
+		},
+		{
+			[]ForwardedElem{
+				{For: Node{ObfuscatedNode: "_vsHsYz", ObfuscatedPort: "_aEC"}},
+			},
+			http.Header{"Forwarded": {`for="_vsHsYz:_aEC"`}},
 		},
 	}
 	for _, test := range tests {

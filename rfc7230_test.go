@@ -169,6 +169,29 @@ func TestVia(t *testing.T) {
 	}
 }
 
+func TestSetVia(t *testing.T) {
+	tests := []struct {
+		input  []ViaElem
+		result http.Header
+	}{
+		{
+			[]ViaElem{{"HTTP/1.1", "foo", ""}},
+			http.Header{"Via": {`1.1 foo`}},
+		},
+		{
+			[]ViaElem{{"FSTR/3.0", "bar.example.net:8080", "(baz)"}},
+			http.Header{"Via": {`FSTR/3.0 bar.example.net:8080 (\(baz\))`}},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			header := http.Header{}
+			SetVia(header, test.input)
+			checkGenerate(t, test.input, test.result, header)
+		})
+	}
+}
+
 func TestViaFuzz(t *testing.T) {
 	checkFuzz(t, "Via", Via, SetVia)
 }

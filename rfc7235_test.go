@@ -566,6 +566,14 @@ func TestSetAuthorization(t *testing.T) {
 			http.Header{"Authorization": {`Digest realm="Hello", qop=auth`}},
 		},
 		{
+			// No need to do any of the above stuff for non-Digest credentials.
+			Auth{
+				Scheme: "Foo",
+				Params: map[string]string{"nonce": "abcde"},
+			},
+			http.Header{"Authorization": {"Foo nonce=abcde"}},
+		},
+		{
 			// As documented, we can use EncodeExtValue manually
 			// to send 'username*'.
 			Auth{

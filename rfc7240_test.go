@@ -218,6 +218,18 @@ func TestSetPrefer(t *testing.T) {
 			},
 			http.Header{"Prefer": {`foo;qux="quoted \"xyzzy\""`}},
 		},
+		{
+			map[string]Pref{
+				"foo": {"", map[string]string{"qux": `"quoted" xyzzy`}},
+			},
+			http.Header{"Prefer": {`foo;qux="\"quoted\" xyzzy"`}},
+		},
+		{
+			map[string]Pref{
+				"foo": {"", map[string]string{"qux": `"`}},
+			},
+			http.Header{"Prefer": {`foo;qux="\""`}},
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
