@@ -126,31 +126,31 @@ func consumeDelimited(v string, opener, closer byte) (text, newv string) {
 buffered:
 	// But once we have encountered a quoted pair,
 	// we have to unquote into a buffer.
-	buf := make([]byte, i)
-	copy(buf, v)
+	b := &strings.Builder{}
+	b.WriteString(v[:i])
 	quoted := false
 	for ; i < len(v); i++ {
 		switch {
 		case quoted:
-			buf = append(buf, v[i])
+			b.WriteByte(v[i])
 			quoted = false
 		case v[i] == closer:
 			nesting--
 			if nesting == 0 {
-				return string(buf), v[i+1:]
+				return b.String(), v[i+1:]
 			}
-			buf = append(buf, v[i])
+			b.WriteByte(v[i])
 		case v[i] == opener:
 			nesting++
-			buf = append(buf, v[i])
+			b.WriteByte(v[i])
 		case v[i] == '\\':
 			quoted = true
 		default:
-			buf = append(buf, v[i])
+			b.WriteByte(v[i])
 		}
 	}
 	// Unterminated string.
-	return string(buf), ""
+	return b.String(), ""
 }
 
 func writeQuoted(b *strings.Builder, s string) {
@@ -162,13 +162,18 @@ func writeComment(b *strings.Builder, s string) {
 }
 
 func writeDelimited(b *strings.Builder, s string, opener, closer byte) {
+	b.Grow(1 + len(s) + 1) // need at least this many bytes
 	b.WriteByte(opener)
+	offset := 0
 	for i := 0; i < len(s); i++ {
 		if s[i] == opener || s[i] == closer || s[i] == '\\' {
+			// Dump the preceding chunk of s that doesn't need escaping.
+			b.WriteString(s[offset:i])
 			b.WriteByte('\\')
+			offset = i
 		}
-		b.WriteByte(s[i])
 	}
+	b.WriteString(s[offset:])
 	b.WriteByte(closer)
 }
 

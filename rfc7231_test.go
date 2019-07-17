@@ -878,17 +878,38 @@ func TestAccept(t *testing.T) {
 	}
 }
 
+const (
+	acceptSimple  = `application/json, text/xml;q=0.5`
+	acceptComplex = `application/x.my-custom+json;q=1;full;linkage=no, application/vnd.api+json;profile="http://example.com/last-modified";q=0.9, application/vnd.api+json;q=0.8, application/json;q=0.6, text/*;q=0.1`
+)
+
 func BenchmarkAcceptSimple(b *testing.B) {
-	header := http.Header{"Accept": {"application/json, text/xml;q=0.5"}}
+	header := http.Header{"Accept": {acceptSimple}}
 	for i := 0; i < b.N; i++ {
 		Accept(header)
 	}
 }
 
 func BenchmarkAcceptComplex(b *testing.B) {
-	header := http.Header{"Accept": {`application/x.my-custom+json;q=1;full;linkage=no, application/vnd.api+json;profile="http://example.com/last-modified";q=0.9, application/vnd.api+json;q=0.8, application/json;q=0.6, text/*;q=0.1`}}
+	header := http.Header{"Accept": {acceptComplex}}
 	for i := 0; i < b.N; i++ {
 		Accept(header)
+	}
+}
+
+func BenchmarkSetAcceptSimple(b *testing.B) {
+	header := http.Header{"Accept": {acceptSimple}}
+	parsed := Accept(header)
+	for i := 0; i < b.N; i++ {
+		SetAccept(header, parsed)
+	}
+}
+
+func BenchmarkSetAcceptComplex(b *testing.B) {
+	header := http.Header{"Accept": {acceptComplex}}
+	parsed := Accept(header)
+	for i := 0; i < b.N; i++ {
+		SetAccept(header, parsed)
 	}
 }
 

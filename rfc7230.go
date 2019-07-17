@@ -21,8 +21,12 @@ type ViaElem struct {
 // BUG(vfaronov): Incorrectly parses some extravagant values of uri-host
 // that do not occur in practice but are theoretically admitted by RFC 3986.
 func Via(h http.Header) []ViaElem {
-	var elems []ViaElem
-	for v, vs := iterElems("", h["Via"]); v != ""; v, vs = iterElems(v, vs) {
+	values := h["Via"]
+	if values == nil {
+		return nil
+	}
+	elems := make([]ViaElem, 0, estimateElems(values))
+	for v, vs := iterElems("", values); v != ""; v, vs = iterElems(v, vs) {
 		var elem ViaElem
 		elem.ReceivedProto, v = consumeItem(v)
 		elem.ReceivedProto = canonicalProto(elem.ReceivedProto)

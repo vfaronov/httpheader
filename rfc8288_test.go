@@ -627,9 +627,14 @@ func TestLinkRoundTrip(t *testing.T) {
 	)
 }
 
+const (
+	linkSimple  = `</chapter/4>; rel=next`
+	linkComplex = `</chapter/4>; rel="next prefetch", </chapter/2>; rel=prev, </chapter/preface>; rel=start; title="Preface to the Second Edition of the \"Grand Book of Protocols\"", <../>; rel=up, <https://example.com/help>; rel=help; title*=UTF-8'en'Reader%20help, </dark.css>; rel="alternate stylesheet"; type="text/css"; media=screen`
+)
+
 func BenchmarkLinkSimple(b *testing.B) {
 	base := U(testBase)
-	header := http.Header{"Link": {"</chapter/4>; rel=next"}}
+	header := http.Header{"Link": {linkSimple}}
 	for i := 0; i < b.N; i++ {
 		Link(header, base)
 	}
@@ -637,14 +642,27 @@ func BenchmarkLinkSimple(b *testing.B) {
 
 func BenchmarkLinkComplex(b *testing.B) {
 	base := U(testBase)
-	header := http.Header{"Link": {
-		`</chapter/4>; rel="next prefetch", </chapter/2>; rel=prev`,
-		`</chapter/intro>; rel=start; title="Introduction", <../>; rel=up`,
-		`<https://example.com/help>; rel=help; title*=UTF-8'en'Reader%20help`,
-		`</dark.css>; rel="alternate stylesheet"; type="text/css"; media=screen`,
-	}}
+	header := http.Header{"Link": {linkComplex}}
 	for i := 0; i < b.N; i++ {
 		Link(header, base)
+	}
+}
+
+func BenchmarkSetLinkSimple(b *testing.B) {
+	base := U(testBase)
+	header := http.Header{"Link": {linkSimple}}
+	parsed := Link(header, base)
+	for i := 0; i < b.N; i++ {
+		SetLink(header, parsed)
+	}
+}
+
+func BenchmarkSetLinkComplex(b *testing.B) {
+	base := U(testBase)
+	header := http.Header{"Link": {linkComplex}}
+	parsed := Link(header, base)
+	for i := 0; i < b.N; i++ {
+		SetLink(header, parsed)
 	}
 }
 
