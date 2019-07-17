@@ -1,16 +1,16 @@
 .PHONY: test lint qa coverhtml fmt example
 
 test:
-	go test -cover .
+# The name "coverage.txt" is apparently required for Codecov.
+	go test -coverprofile=coverage.txt .
 
 lint:
 	golangci-lint run
 
 qa: test lint
 
-coverhtml:
-	go test -coverprofile=cover.out .
-	go tool cover -html=cover.out
+coverhtml: test
+	go tool cover -html=coverage.txt
 
 fmt:
 	find . -type f -name '*.go' -exec gofmt -s -w {} \;
