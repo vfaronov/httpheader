@@ -239,6 +239,10 @@ func TestWWWAuthenticate(t *testing.T) {
 				},
 			},
 		},
+		{
+			http.Header{"Www-Authenticate": {`Foo , =bar`}},
+			[]Auth{{Scheme: "foo"}},
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -455,7 +459,7 @@ func TestAuthorization(t *testing.T) {
 			http.Header{"Authorization": {"Basic j.doe:secret123"}},
 			Auth{
 				Scheme: "basic",
-				Params: map[string]string{"j.doe:secret123": ""},
+				Token:  "j.doe:secret123",
 			},
 		},
 		{

@@ -2,7 +2,6 @@ package httpheader
 
 import (
 	"net/http"
-	"regexp"
 	"strings"
 )
 
@@ -108,9 +107,7 @@ ParamsLoop:
 		if next == ',' {
 			if challenge {
 				// This can be the next auth-param or the next challenge.
-				// To distinguish, we must look ahead: an auth-param always has
-				// an equal sign after the first token, but a challenge never does.
-				if !detectAuthParam.MatchString(v[1:]) {
+				if !detectAuthParam(v[1:]) {
 					break ParamsLoop
 				}
 			}
@@ -121,12 +118,9 @@ ParamsLoop:
 
 		if maybeToken68 {
 			// This can be the first auth-param or the first and only token68.
-			// To distinguish, we must look ahead: an auth-param always has
-			// another token or quoted-string after the equal sign, but a token68
-			// never does.
-			if t := detectToken68.FindString(v); t != "" {
-				auth.Token = strings.TrimRight(t, " \t,")
-				v = v[len(auth.Token):]
+			if token68, rest := consumeToken68(v); token68 != "" {
+				auth.Token = token68
+				v = rest
 				break
 			}
 		}
@@ -150,10 +144,32 @@ ParamsLoop:
 	return auth, v
 }
 
-var (
-	detectAuthParam = regexp.MustCompile("^[ \t,]*[!#$%&'*+.^_`|~A-Za-z0-9-]+[ \t]*=")
-	detectToken68   = regexp.MustCompile("^[A-Za-z0-9._~+/-]+=*[ \t]*(,|$)")
-)
+func detectAuthParam(v string) bool {
+	// An auth-param always has an equal sign after the first token,
+	// but a challenge never does.
+	for peek(v) == ' ' || peek(v) == '\t' || peek(v) == ',' {
+		v = v[1:]
+	}
+	_, v = consumeItem(v)
+	return peek(skipWS(v)) == '='
+}
+
+func consumeToken68(v string) (token68, newv string) {
+	orig := v
+	token68, v = consumeItem(v)
+	// consumeItem didn't consume the trailing equal signs, if any.
+	for peek(v) == '=' {
+		token68 = orig[:len(token68)+1]
+		v = v[1:]
+	}
+	v = skipWS(v)
+	if v != "" && v[0] != ',' {
+		// A token68 may only be followed by the next challenge,
+		// so if we see anything else, it's an auth-param, not a token68.
+		return "", orig
+	}
+	return token68, v
+}
 
 func setChallenges(h http.Header, name string, challenges []Auth) {
 	if len(challenges) == 0 {
