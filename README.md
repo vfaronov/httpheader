@@ -1,5 +1,10 @@
 # httpheader
 
+[![GoDoc](https://godoc.org/github.com/vfaronov/httpheader?status.svg)](https://godoc.org/github.com/vfaronov/httpheader?status.svg)
+[![Travis build status](https://travis-ci.org/vfaronov/httpheader.svg?branch=master)](https://travis-ci.org/vfaronov/httpheader)
+[![Codecov](https://codecov.io/gh/vfaronov/httpheader/branch/master/graph/badge.svg)](https://codecov.io/gh/vfaronov/httpheader)
+[![Go Report Card](https://goreportcard.com/badge/github.com/vfaronov/httpheader)](https://goreportcard.com/report/github.com/vfaronov/httpheader)
+
 This is a Go package to parse and generate standard HTTP headers correctly.
 It knows about complex headers like 
 [`Accept`](https://tools.ietf.org/html/rfc7231#section-5.3.2),
