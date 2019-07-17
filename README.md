@@ -1,6 +1,6 @@
 # httpheader
 
-[![GoDoc](https://godoc.org/github.com/vfaronov/httpheader?status.svg)](https://godoc.org/github.com/vfaronov/httpheader?status.svg)
+[![GoDoc](https://godoc.org/github.com/vfaronov/httpheader?status.svg)](https://godoc.org/github.com/vfaronov/httpheader)
 [![Travis build status](https://travis-ci.org/vfaronov/httpheader.svg?branch=master)](https://travis-ci.org/vfaronov/httpheader)
 [![Codecov](https://codecov.io/gh/vfaronov/httpheader/branch/master/graph/badge.svg)](https://codecov.io/gh/vfaronov/httpheader)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vfaronov/httpheader)](https://goreportcard.com/report/github.com/vfaronov/httpheader)
