@@ -16,7 +16,7 @@ type EntityTag struct {
 // AnyTag represents a wildcard (*) in an If-Match or If-None-Match header.
 var AnyTag = EntityTag{wildcard: true}
 
-// SetETag replaces the ETag header in h.
+// SetETag replaces the ETag header in h (RFC 7232 Section 2.3).
 //
 // This package does not provide a function to parse ETag, only to set it.
 // Parsing an ETag is of no use to most clients, and can hamper interoperability,

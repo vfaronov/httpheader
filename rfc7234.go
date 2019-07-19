@@ -41,7 +41,8 @@ func Warning(h http.Header) []WarningElem {
 	return elems
 }
 
-// SetWarning replaces the Warning header in h. See also AddWarning.
+// SetWarning replaces the Warning header in h (RFC 7234 Section 5.5).
+// See also AddWarning.
 func SetWarning(h http.Header, elems []WarningElem) {
 	if len(elems) == 0 {
 		h.Del("Warning")
@@ -64,11 +65,10 @@ func buildWarning(elems []WarningElem) string {
 		if i > 0 {
 			write(b, ", ")
 		}
-		write(b, strconv.Itoa(elem.Code), " ")
 		if elem.Agent == "" {
 			elem.Agent = "-"
 		}
-		write(b, elem.Agent, " ")
+		write(b, strconv.Itoa(elem.Code), " ", elem.Agent, " ")
 		writeQuoted(b, elem.Text)
 		if !elem.Date.IsZero() {
 			write(b, ` "`, elem.Date.Format(http.TimeFormat), `"`)

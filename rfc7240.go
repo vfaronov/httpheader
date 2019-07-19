@@ -11,8 +11,8 @@ type Pref struct {
 	Params map[string]string
 }
 
-// Prefer parses the Prefer header from h (RFC 7240 with errata),
-// returning a map where keys are preference names.
+// Prefer parses the Prefer header from h (RFC 7240), returning a map where keys
+// are preference names.
 func Prefer(h http.Header) map[string]Pref {
 	values := h["Prefer"]
 	if values == nil {
@@ -35,7 +35,7 @@ func Prefer(h http.Header) map[string]Pref {
 	return r
 }
 
-// SetPrefer replaces the Prefer header in h (RFC 7240 with errata).
+// SetPrefer replaces the Prefer header in h (RFC 7240).
 func SetPrefer(h http.Header, prefs map[string]Pref) {
 	if len(prefs) == 0 {
 		h.Del("Prefer")
@@ -50,8 +50,8 @@ func SetPrefer(h http.Header, prefs map[string]Pref) {
 	h.Set("Prefer", b.String())
 }
 
-// PreferenceApplied parses the Preference-Applied header from h (RFC 7240
-// with errata), returning a map where keys are preference names.
+// PreferenceApplied parses the Preference-Applied header from h
+// (RFC 7240 Section 3), returning a map where keys are preference names.
 func PreferenceApplied(h http.Header) map[string]string {
 	values := h["Preference-Applied"]
 	if values == nil {
@@ -70,7 +70,8 @@ func PreferenceApplied(h http.Header) map[string]string {
 	return r
 }
 
-// SetPreferenceApplied replaces the Preference-Applied header in h.
+// SetPreferenceApplied replaces the Preference-Applied header in h
+// (RFC 7240 Section 3).
 func SetPreferenceApplied(h http.Header, prefs map[string]string) {
 	if len(prefs) == 0 {
 		h.Del("Preference-Applied")

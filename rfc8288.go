@@ -139,7 +139,7 @@ LinksLoop:
 	return links
 }
 
-// SetLink replaces the Link header in h. See also AddLink.
+// SetLink replaces the Link header in h (RFC 8288). See also AddLink.
 //
 // The Title of each LinkElem, if non-empty, is serialized into a 'title'
 // parameter in quoted-string form, or a 'title*' parameter in RFC 8187 encoding,

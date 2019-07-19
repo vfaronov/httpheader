@@ -49,6 +49,7 @@ func Forwarded(h http.Header) []ForwardedElem {
 }
 
 // SetForwarded replaces the Forwarded header in h (RFC 7239).
+// See also AddForwarded.
 func SetForwarded(h http.Header, elems []ForwardedElem) {
 	if len(elems) == 0 {
 		h.Del("Forwarded")
@@ -101,7 +102,7 @@ type ForwardedElem struct {
 	Ext   map[string]string
 }
 
-// A Node represents a node identifier (RFC 7239 Section 6).
+// A Node represents a node identifier in a Forwarded header (RFC 7239 Section 6).
 // Either IP or ObfuscatedNode may be non-zero, but not both.
 // Similarly for Port and ObfuscatedPort.
 type Node struct {

@@ -12,4 +12,4 @@ script:
   - make qa
 
 after_success:
-  - bash <(curl -sfL https://codecov.io/bash)
+  - curl -sfL https://codecov.io/bash | bash

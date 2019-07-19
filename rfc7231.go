@@ -26,7 +26,7 @@ func Allow(h http.Header) []string {
 	return methods
 }
 
-// SetAllow replaces the Allow header in h.
+// SetAllow replaces the Allow header in h (RFC 7231 Section 7.4.1).
 func SetAllow(h http.Header, methods []string) {
 	h.Set("Allow", strings.Join(methods, ", "))
 }
@@ -50,7 +50,7 @@ func Vary(h http.Header) map[string]bool {
 	return names
 }
 
-// SetVary replaces the Vary header in h.
+// SetVary replaces the Vary header in h (RFC 7231 Section 7.1.4).
 // Names mapping to false are ignored. See also AddVary.
 func SetVary(h http.Header, names map[string]bool) {
 	b := &strings.Builder{}
@@ -66,7 +66,8 @@ func SetVary(h http.Header, names map[string]bool) {
 	h.Set("Vary", b.String())
 }
 
-// AddVary appends the given names to the Vary header in h.
+// AddVary appends the given names to the Vary header in h
+// (RFC 7231 Section 7.1.4).
 func AddVary(h http.Header, names ...string) {
 	if len(names) == 0 {
 		return
@@ -89,7 +90,7 @@ func UserAgent(h http.Header) []Product {
 	return parseProducts(h.Get("User-Agent"))
 }
 
-// SetUserAgent replaces the User-Agent header in h.
+// SetUserAgent replaces the User-Agent header in h (RFC 7231 Section 5.5.3).
 func SetUserAgent(h http.Header, products []Product) {
 	if len(products) == 0 {
 		h.Del("User-Agent")
@@ -103,7 +104,7 @@ func Server(h http.Header) []Product {
 	return parseProducts(h.Get("Server"))
 }
 
-// SetServer replaces the Server header in h.
+// SetServer replaces the Server header in h (RFC 7231 Section 7.4.2).
 func SetServer(h http.Header, products []Product) {
 	if len(products) == 0 {
 		h.Del("Server")
@@ -122,10 +123,7 @@ func parseProducts(v string) []Product {
 			v = v[1:]
 			continue
 		}
-		if sep := strings.IndexByte(product.Name, '/'); sep >= 0 {
-			product.Version = product.Name[sep+1:]
-			product.Name = product.Name[:sep]
-		}
+		product.Name, product.Version = consumeTo(product.Name, '/', false)
 		// Collect all comments for this product.
 		for {
 			v = skipWS(v)
@@ -198,7 +196,7 @@ func RetryAfter(h http.Header) time.Time {
 	return date.Add(time.Duration(seconds) * time.Second)
 }
 
-// SetRetryAfter replaces the Retry-After header in h.
+// SetRetryAfter replaces the Retry-After header in h (RFC 7231 Section 7.1.3).
 func SetRetryAfter(h http.Header, after time.Time) {
 	h.Set("Retry-After", after.Format(http.TimeFormat))
 }
@@ -213,7 +211,7 @@ func ContentType(h http.Header) (mtype string, params map[string]string) {
 	return
 }
 
-// SetContentType replaces the Content-Type header in h.
+// SetContentType replaces the Content-Type header in h (RFC 7231 Section 3.1.1.5).
 func SetContentType(h http.Header, mtype string, params map[string]string) {
 	b := &strings.Builder{}
 	write(b, mtype)
@@ -272,10 +270,10 @@ func Accept(h http.Header) []AcceptElem {
 	return elems
 }
 
-// SetAccept replaces the Accept header in h.
+// SetAccept replaces the Accept header in h (RFC 7231 Section 5.3.2).
 //
-// Note: Q in elems must be set explicitly to avoid sending "q=0",
-// which would mean "not acceptable".
+// Q in elems must be set explicitly to avoid sending "q=0", which would mean
+// "not acceptable".
 func SetAccept(h http.Header, elems []AcceptElem) {
 	if elems == nil {
 		h.Del("Accept")

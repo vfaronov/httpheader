@@ -38,7 +38,7 @@ ParamsLoop:
 	return
 }
 
-// SetContentDisposition replaces the Content-Disposition header in h.
+// SetContentDisposition replaces the Content-Disposition header in h (RFC 6266).
 //
 // If filename is not empty, it must be valid UTF-8, which is serialized into
 // a 'filename' parameter in plain ASCII, or a 'filename*' parameter in RFC 8187

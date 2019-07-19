@@ -34,7 +34,8 @@ func WWWAuthenticate(h http.Header) []Auth {
 	return parseChallenges(h["Www-Authenticate"])
 }
 
-// SetWWWAuthenticate replaces the WWW-Authenticate header in h.
+// SetWWWAuthenticate replaces the WWW-Authenticate header in h
+// (RFC 7235 Section 4.1).
 func SetWWWAuthenticate(h http.Header, challenges []Auth) {
 	setChallenges(h, "Www-Authenticate", challenges)
 }
@@ -45,7 +46,8 @@ func ProxyAuthenticate(h http.Header) []Auth {
 	return parseChallenges(h["Proxy-Authenticate"])
 }
 
-// SetProxyAuthenticate replaces the Proxy-Authenticate header in h.
+// SetProxyAuthenticate replaces the Proxy-Authenticate header in h
+// (RFC 7235 Section 4.3).
 func SetProxyAuthenticate(h http.Header, challenges []Auth) {
 	setChallenges(h, "Proxy-Authenticate", challenges)
 }
@@ -56,7 +58,8 @@ func Authorization(h http.Header) Auth {
 	return parseCredentials(h.Get("Authorization"))
 }
 
-// SetAuthorization replaces the Authorization header in h.
+// SetAuthorization replaces the Authorization header in h
+// (RFC 7235 Section 4.2).
 func SetAuthorization(h http.Header, credentials Auth) {
 	h.Set("Authorization", buildAuth(false, credentials))
 }
@@ -68,7 +71,8 @@ func ProxyAuthorization(h http.Header) Auth {
 	return parseCredentials(h.Get("Proxy-Authorization"))
 }
 
-// SetProxyAuthorization replaces the Proxy-Authorization header in h.
+// SetProxyAuthorization replaces the Proxy-Authorization header in h
+// (RFC 7235 Section 4.4).
 func SetProxyAuthorization(h http.Header, credentials Auth) {
 	h.Set("Proxy-Authorization", buildAuth(false, credentials))
 }

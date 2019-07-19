@@ -78,7 +78,7 @@ func consumeReceivedBy(v string) (by, newv string) {
 	return consumeItem(v)
 }
 
-// SetVia replaces the Via header in h. See also AddVia.
+// SetVia replaces the Via header in h (RFC 7230 Section 5.7.1). See also AddVia.
 func SetVia(h http.Header, elems []ViaElem) {
 	if len(elems) == 0 {
 		h.Del("Via")
