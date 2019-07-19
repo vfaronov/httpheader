@@ -1,0 +1,6 @@
+func FuzzAuthorization(data []byte) int {
+	h := http.Header{"Authorization": {string(data)}}
+	v := httpheader.Authorization(h)
+	httpheader.SetAuthorization(h, v)
+	return 0
+}

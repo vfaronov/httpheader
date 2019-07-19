@@ -1,0 +1,1 @@
+max-stale=300, stale-while-revalidate=300, stale-if-error=300

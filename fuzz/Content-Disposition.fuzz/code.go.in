@@ -1,0 +1,6 @@
+func FuzzContentDisposition(data []byte) int {
+	h := http.Header{"Content-Disposition": {string(data)}}
+	dtype, filename, params := httpheader.ContentDisposition(h)
+	httpheader.SetContentDisposition(h, dtype, filename, params)
+	return 0
+}

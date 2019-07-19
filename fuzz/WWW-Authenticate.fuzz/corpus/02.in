@@ -1,0 +1,1 @@
+Bearer realm="foo",scope="urn:a=b&c=d,e",error="invalid_token",error_description="foo \"bar\"",

@@ -1,0 +1,1 @@
+Digest realm="a", qop="auth,auth-int", algorithm=SHA-256, nonce="bcd", opaque="efg",  Digest realm="h", qop="auth,	auth-int", algorithm=MD5, nonce="ijk", opaque="lmn"

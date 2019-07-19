@@ -1,0 +1,6 @@
+func FuzzPrefer(data []byte) int {
+	h := http.Header{"Prefer": {string(data)}}
+	v := httpheader.Prefer(h)
+	httpheader.SetPrefer(h, v)
+	return 0
+}

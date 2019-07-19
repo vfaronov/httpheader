@@ -365,10 +365,6 @@ func TestSetForwarded(t *testing.T) {
 	}
 }
 
-func TestForwardedFuzz(t *testing.T) {
-	checkFuzz(t, "Forwarded", Forwarded, SetForwarded)
-}
-
 func TestForwardedRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetForwarded, Forwarded,
 		[]ForwardedElem{

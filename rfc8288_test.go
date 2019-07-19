@@ -607,10 +607,6 @@ func TestSetLink(t *testing.T) {
 	}
 }
 
-func TestLinkFuzz(t *testing.T) {
-	checkFuzz(t, "Link", baseLink, SetLink)
-}
-
 func TestLinkRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetLink, baseLink,
 		[]LinkElem{{
@@ -667,7 +663,7 @@ func BenchmarkSetLinkComplex(b *testing.B) {
 	}
 }
 
-// Adapt Link to the interface expected by checkFuzz and checkRoundTrip.
+// Adapt Link to the interface expected by checkRoundTrip.
 func baseLink(h http.Header) []LinkElem {
 	return Link(h, U(testBase))
 }

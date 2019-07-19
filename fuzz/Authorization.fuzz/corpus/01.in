@@ -1,0 +1,1 @@
+Digest realm="a", qop=auth, algorithm=SHA-256, nonce="bcd", opaque="efg", cnonce=00000034, response="hij", username=vasyan

@@ -348,10 +348,6 @@ func TestSetWWWAuthenticate(t *testing.T) {
 	}
 }
 
-func TestWWWAuthenticateFuzz(t *testing.T) {
-	checkFuzz(t, "Www-Authenticate", WWWAuthenticate, SetWWWAuthenticate)
-}
-
 func TestWWWAuthenticateRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetWWWAuthenticate, WWWAuthenticate,
 		[]Auth{
@@ -592,10 +588,6 @@ func TestSetAuthorization(t *testing.T) {
 			checkGenerate(t, test.input, test.result, header)
 		})
 	}
-}
-
-func TestAuthorizationFuzz(t *testing.T) {
-	checkFuzz(t, "Authorization", Authorization, SetAuthorization)
 }
 
 func TestAuthorizationRoundTrip(t *testing.T) {

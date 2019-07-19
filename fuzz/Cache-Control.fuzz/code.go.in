@@ -1,0 +1,6 @@
+func FuzzCacheControl(data []byte) int {
+	h := http.Header{"Cache-Control": {string(data)}}
+	v := httpheader.CacheControl(h)
+	httpheader.SetCacheControl(h, v)
+	return 0
+}

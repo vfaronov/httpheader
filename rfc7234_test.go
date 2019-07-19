@@ -169,10 +169,6 @@ func TestWarning(t *testing.T) {
 	}
 }
 
-func TestWarningFuzz(t *testing.T) {
-	checkFuzz(t, "Warning", Warning, SetWarning)
-}
-
 func TestWarningRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetWarning, Warning,
 		[]WarningElem{{
@@ -435,10 +431,6 @@ func TestSetCacheControl(t *testing.T) {
 			checkGenerate(t, test.input, test.result, header)
 		})
 	}
-}
-
-func TestCacheControlFuzz(t *testing.T) {
-	checkFuzz(t, "Cache-Control", CacheControl, SetCacheControl)
 }
 
 func BenchmarkCacheControlSimple(b *testing.B) {

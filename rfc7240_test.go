@@ -240,10 +240,6 @@ func TestSetPrefer(t *testing.T) {
 	}
 }
 
-func TestPreferFuzz(t *testing.T) {
-	checkFuzz(t, "Prefer", Prefer, SetPrefer)
-}
-
 func TestPreferRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetPrefer, Prefer,
 		map[string]Pref{
@@ -320,10 +316,6 @@ func TestPreferenceApplied(t *testing.T) {
 			checkParse(t, test.header, test.result, PreferenceApplied(test.header))
 		})
 	}
-}
-
-func TestPreferenceAppliedFuzz(t *testing.T) {
-	checkFuzz(t, "Preference-Applied", PreferenceApplied, SetPreferenceApplied)
 }
 
 func TestPreferenceAppliedRoundTrip(t *testing.T) {

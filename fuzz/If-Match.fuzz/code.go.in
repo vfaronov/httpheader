@@ -1,0 +1,5 @@
+func FuzzIfMatch(data []byte) int {
+	h := http.Header{"If-Match": {string(data)}}
+	httpheader.IfMatch(h)
+	return 0
+}

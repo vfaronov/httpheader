@@ -1,0 +1,6 @@
+func FuzzForwarded(data []byte) int {
+	h := http.Header{"Forwarded": {string(data)}}
+	v := httpheader.Forwarded(h)
+	httpheader.SetForwarded(h, v)
+	return 0
+}

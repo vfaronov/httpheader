@@ -1,0 +1,6 @@
+func FuzzWarning(data []byte) int {
+	h := http.Header{"Warning": {string(data)}}
+	v := httpheader.Warning(h)
+	httpheader.SetWarning(h, v)
+	return 0
+}

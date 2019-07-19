@@ -195,10 +195,6 @@ func TestSetContentDisposition(t *testing.T) {
 	}
 }
 
-func TestContentDispositionFuzz(t *testing.T) {
-	checkFuzz(t, "Content-Disposition", ContentDisposition, SetContentDisposition)
-}
-
 func TestContentDispositionRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetContentDisposition, ContentDisposition,
 		"lower token",

@@ -1,0 +1,6 @@
+func FuzzUserAgent(data []byte) int {
+	h := http.Header{"User-Agent": {string(data)}}
+	v := httpheader.UserAgent(h)
+	httpheader.SetUserAgent(h, v)
+	return 0
+}

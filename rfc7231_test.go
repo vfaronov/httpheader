@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-func TestAllowFuzz(t *testing.T) {
-	checkFuzz(t, "Allow", Allow, SetAllow)
-}
-
 func TestAllow(t *testing.T) {
 	tests := []struct {
 		header http.Header
@@ -161,10 +157,6 @@ func TestSetVary(t *testing.T) {
 	}
 }
 
-func TestVaryFuzz(t *testing.T) {
-	checkFuzz(t, "Vary", Vary, SetVary)
-}
-
 func BenchmarkVary(b *testing.B) {
 	header := http.Header{"Vary": {"Accept, Accept-Language, Accept-Encoding, Prefer", "User-Agent, Cookie"}}
 	for i := 0; i < b.N; i++ {
@@ -204,10 +196,6 @@ func TestUserAgent(t *testing.T) {
 			checkParse(t, test.header, test.result, UserAgent(test.header))
 		})
 	}
-}
-
-func TestUserAgentFuzz(t *testing.T) {
-	checkFuzz(t, "User-Agent", UserAgent, SetUserAgent)
 }
 
 func ExampleSetUserAgent() {
@@ -320,10 +308,6 @@ func TestServer(t *testing.T) {
 	}
 }
 
-func TestServerFuzz(t *testing.T) {
-	checkFuzz(t, "Server", Server, SetServer)
-}
-
 func TestServerRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetServer, Server,
 		[]Product{{
@@ -400,10 +384,6 @@ func TestRetryAfterCurrentTime(t *testing.T) {
 	if parsed.Before(target) || parsed.After(target.Add(1*time.Second)) {
 		t.Fatalf("got %v, expected within 1s of %v", parsed, target)
 	}
-}
-
-func TestRetryAfterFuzz(t *testing.T) {
-	checkFuzz(t, "Retry-After", RetryAfter, SetRetryAfter)
 }
 
 func TestContentType(t *testing.T) {
@@ -564,10 +544,6 @@ func TestSetContentType(t *testing.T) {
 			checkGenerate(t, input, test.result, header)
 		})
 	}
-}
-
-func TestContentTypeFuzz(t *testing.T) {
-	checkFuzz(t, "Content-Type", ContentType, SetContentType)
 }
 
 func TestContentTypeRoundTrip(t *testing.T) {
@@ -1060,10 +1036,6 @@ func TestSetAccept(t *testing.T) {
 			checkGenerate(t, test.input, test.result, header)
 		})
 	}
-}
-
-func TestAcceptFuzz(t *testing.T) {
-	checkFuzz(t, "Accept", Accept, SetAccept)
 }
 
 func TestAcceptRoundTrip(t *testing.T) {

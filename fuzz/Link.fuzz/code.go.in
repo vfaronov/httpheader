@@ -1,0 +1,6 @@
+func FuzzLink(data []byte) int {
+	h := http.Header{"Link": {string(data)}}
+	v := httpheader.Link(h, base)
+	httpheader.SetLink(h, v)
+	return 0
+}

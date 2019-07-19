@@ -1,0 +1,6 @@
+func FuzzVia(data []byte) int {
+	h := http.Header{"Via": {string(data)}}
+	v := httpheader.Via(h)
+	httpheader.SetVia(h, v)
+	return 0
+}

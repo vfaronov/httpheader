@@ -1,0 +1,6 @@
+func FuzzAccept(data []byte) int {
+	h := http.Header{"Accept": {string(data)}}
+	v := httpheader.Accept(h)
+	httpheader.SetAccept(h, v)
+	return 0
+}

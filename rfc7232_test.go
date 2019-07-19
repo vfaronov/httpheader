@@ -259,7 +259,3 @@ func TestMatchWeak(t *testing.T) {
 		})
 	}
 }
-
-func TestIfMatchFuzz(t *testing.T) {
-	checkFuzz(t, "If-Match", IfMatch, nil)
-}

@@ -32,40 +32,6 @@ func checkGenerate(t *testing.T, input interface{}, expected, actual http.Header
 	}
 }
 
-// checkFuzz runs a battery of sub-tests for the following property:
-// Given any input header (with the given name), parseFunc must not panic or hang,
-// and generateFunc must not panic or hang on the value(s) returned by parseFunc.
-func checkFuzz(t *testing.T, name string, parseFunc, generateFunc interface{}) {
-	t.Helper()
-	parseFuncV := reflect.ValueOf(parseFunc)
-	generateFuncV := reflect.ValueOf(generateFunc)
-	for i := 0; i < 100; i++ {
-		t.Run("", func(t *testing.T) {
-			rand := rand.New(rand.NewSource(int64(i)))
-			header := http.Header{}
-			n := 1 + rand.Intn(3)
-			for i := 0; i < n; i++ {
-				b := make([]byte, rand.Intn(64))
-				rand.Read(b)
-				// Bias towards characters that trigger more parser states.
-				for j := range b {
-					if rand.Intn(3) == 0 {
-						const punct = "\t \"%'()*,/:;<=>"
-						b[j] = punct[rand.Intn(len(punct))]
-					}
-				}
-				header.Add(name, string(b))
-			}
-			t.Logf("header: %#v", header)
-			argsV := []reflect.Value{reflect.ValueOf(header)}
-			resultV := parseFuncV.Call(argsV)
-			if generateFuncV.Kind() != reflect.Invalid { // not nil passed
-				generateFuncV.Call(append(argsV, resultV...))
-			}
-		})
-	}
-}
-
 // checkRoundTrip runs a battery of sub-tests for the following property:
 // Given any valid, canonicalized input value(s), generateFunc must generate
 // a header that, when parsed by parseFunc, gives back the same value(s).

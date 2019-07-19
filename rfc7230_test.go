@@ -192,10 +192,6 @@ func TestSetVia(t *testing.T) {
 	}
 }
 
-func TestViaFuzz(t *testing.T) {
-	checkFuzz(t, "Via", Via, SetVia)
-}
-
 func TestViaRoundTrip(t *testing.T) {
 	checkRoundTrip(t, SetVia, Via,
 		[]ViaElem{{

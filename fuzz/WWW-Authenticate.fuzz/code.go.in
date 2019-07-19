@@ -1,0 +1,6 @@
+func FuzzWWWAuthenticate(data []byte) int {
+	h := http.Header{"Www-Authenticate": {string(data)}}
+	v := httpheader.WWWAuthenticate(h)
+	httpheader.SetWWWAuthenticate(h, v)
+	return 0
+}
