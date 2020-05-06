@@ -18,3 +18,5 @@ fuzz.go: *.fuzz/code.go.in
 clean:
 	rm -fd *.zip *.fuzz/crashers *.fuzz/suppressions
 	find *.fuzz/corpus -type f \! -name '*.in' -delete
+	cd ../ && go mod edit -droprequire=github.com/dvyukov/go-fuzz
+	cd ../ && go mod tidy
