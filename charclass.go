@@ -23,6 +23,7 @@ func classify(s string) (tokenOK, quotedSafe, quotedOK bool) {
 			quotedSafe, tokenOK = false, false
 		case cQuotedSafe:
 			tokenOK = false
+		case cTokenOK:
 		}
 	}
 	return
